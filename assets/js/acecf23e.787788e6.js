@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunktools_docs=self.webpackChunktools_docs||[]).push([[1903],{1912:o=>{o.exports=JSON.parse('{"blogBasePath":"/ai-tutor-monorepo/blog","blogTitle":"Blog","authorsListPath":"/ai-tutor-monorepo/blog/authors"}')}}]);
