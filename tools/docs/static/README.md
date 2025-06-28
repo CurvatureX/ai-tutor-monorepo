@@ -2,6 +2,8 @@
 
 A comprehensive AI-powered tutoring platform built with microservices architecture, supporting multiple client applications and real-time learning experiences.
 
+在线文档： https://curvaturex.github.io/ai-tutor-monorepo
+
 ## 🏗️ Architecture Overview
 
 This monorepo contains a complete AI tutoring ecosystem with:
@@ -25,7 +27,6 @@ This monorepo contains a complete AI tutoring ecosystem with:
 - Immersive 3D learning environments
 - Interactive educational content
 - Gamified learning experiences
-- VR/AR support capabilities
 
 ## 🔧 Backend Services
 
@@ -83,13 +84,7 @@ This monorepo contains a complete AI tutoring ecosystem with:
    # Open clients/unity-3d in Unity Editor
    ```
 
-## 📚 Documentation
-
-- **[Tech Design](./docs/tech_design/)**: Architecture decisions and system design
-- **[API Documentation](./docs/api_documentation/)**: Service APIs and integration guides
-- **[Deployment Guide](./infrastructure/)**: Kubernetes and cloud deployment instructions
-
-## 🛠️ Development
+## Development
 
 ### Project Structure
 
@@ -103,26 +98,6 @@ This monorepo contains a complete AI tutoring ecosystem with:
 ├── infrastructure/    # Deployment configurations
 └── tools/             # Development and build tools
 ```
-
-### Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests and documentation
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🤝 Support
-
-For questions and support, please:
-
-- Check the documentation in `/docs`
-- Open an issue for bugs or feature requests
-- Contact the development team
 
 ---
 

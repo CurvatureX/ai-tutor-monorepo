@@ -1,4 +1,20 @@
+---
+sidebar_position: 1
+title: AI Agent Tech Design 模板
+description: AI Agent 技术设计文档的标准模板，包含完整的设计框架和最佳实践
+keywords: [AI Agent, 技术设计, 模板, LLM, Prompt Engineering]
+---
+
 # AI Agent Tech Design 模板
+
+## 文档信息
+
+- **模板版本**: v2.0
+- **适用范围**: AI Agent 和 LLM 应用技术设计
+- **更新日期**: 2025-01-18
+- **维护团队**: CurvTech AI 团队
+
+---
 
 ## 1. 项目概述 (Overview)
 
@@ -110,7 +126,7 @@
 
 ### 性能指标
 
-- **响应时间**: 端到端延迟目标（如<3 秒）
+- **响应时间**: 端到端延迟目标（如 `<3 秒`）
 - **并发处理**: 支持的并发用户数
 - **Token 消耗**: 成本控制和优化策略
 - **缓存命中率**: 提升响应速度
