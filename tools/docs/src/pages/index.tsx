@@ -3,9 +3,6 @@ import clsx from "clsx";
 import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
-import { useEffect, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 import styles from "./index.module.css";
 
@@ -23,77 +20,72 @@ function HomepageHeader() {
           >
             View Tech Design
           </Link>
+          <Link className="button button--primary button--lg" to="/readme">
+            View Full README
+          </Link>
         </div>
       </div>
     </header>
   );
 }
 
-function ReadmeContent() {
-  const [readmeContent, setReadmeContent] = useState<string>("");
-  const { siteConfig } = useDocusaurusContext();
-
-  useEffect(() => {
-    // Fetch the README.md from the static folder
-    fetch(`${siteConfig.baseUrl}README.md`)
-      .then((response) => response.text())
-      .then((text) => setReadmeContent(text))
-      .catch(() => {
-        setReadmeContent("# README.md content could not be loaded");
-      });
-  }, [siteConfig.baseUrl]);
-
+function ProjectOverview() {
   return (
     <section className={styles.readme}>
       <div className="container">
         <div className="row">
           <div className="col col--12">
             <div className={styles.readmeContent}>
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  // Custom components for better styling
-                  h1: ({ children }) => (
-                    <h1 className="markdown-h1">{children}</h1>
-                  ),
-                  h2: ({ children }) => (
-                    <h2 className="markdown-h2">{children}</h2>
-                  ),
-                  h3: ({ children }) => (
-                    <h3 className="markdown-h3">{children}</h3>
-                  ),
-                  code: (props) => {
-                    const { children, className, ...rest } = props;
-                    const match = /language-(\w+)/.exec(className || "");
-                    return (
-                      <code className="markdown-inline-code" {...rest}>
-                        {children}
-                      </code>
-                    );
-                  },
-                  pre: ({ children }) => (
-                    <pre className="markdown-pre">{children}</pre>
-                  ),
-                  ul: ({ children }) => (
-                    <ul className="markdown-ul">{children}</ul>
-                  ),
-                  ol: ({ children }) => (
-                    <ol className="markdown-ol">{children}</ol>
-                  ),
-                  li: ({ children }) => (
-                    <li className="markdown-li">{children}</li>
-                  ),
-                  p: ({ children }) => <p className="markdown-p">{children}</p>,
-                  strong: ({ children }) => (
-                    <strong className="markdown-strong">{children}</strong>
-                  ),
-                  em: ({ children }) => (
-                    <em className="markdown-em">{children}</em>
-                  ),
-                }}
-              >
-                {readmeContent}
-              </ReactMarkdown>
+              <h2>🏗️ Architecture Overview</h2>
+              <p>
+                A comprehensive AI-powered tutoring platform built with
+                microservices architecture, supporting multiple client
+                applications and real-time learning experiences.
+              </p>
+
+              <div className="row">
+                <div className="col col--6">
+                  <h3>📱 Client Applications</h3>
+                  <ul>
+                    <li>
+                      <strong>Flutter Mobile App</strong> - Cross-platform
+                      mobile application
+                    </li>
+                    <li>
+                      <strong>Unity 3D Application</strong> - Immersive learning
+                      environments
+                    </li>
+                  </ul>
+                </div>
+                <div className="col col--6">
+                  <h3>🔧 Backend Services</h3>
+                  <ul>
+                    <li>
+                      <strong>User Service</strong> - Authentication and
+                      profiles
+                    </li>
+                    <li>
+                      <strong>Conversation Service</strong> - AI-powered chat
+                      logic
+                    </li>
+                    <li>
+                      <strong>Speech Service</strong> - Voice processing
+                    </li>
+                    <li>
+                      <strong>Analytics Service</strong> - Learning insights
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="text--center" style={{ marginTop: "2rem" }}>
+                <Link
+                  className="button button--outline button--primary button--lg"
+                  to="/readme"
+                >
+                  Read Complete Documentation →
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -108,7 +100,7 @@ export default function Home(): ReactNode {
     <Layout>
       <HomepageHeader />
       <main>
-        <ReadmeContent />
+        <ProjectOverview />
       </main>
     </Layout>
   );

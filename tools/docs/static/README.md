@@ -79,7 +79,7 @@ This monorepo contains a complete AI tutoring ecosystem with:
    ```
 
 4. **Open Unity project**
-   ```bash
+   ```
    # Open clients/unity-3d in Unity Editor
    ```
 

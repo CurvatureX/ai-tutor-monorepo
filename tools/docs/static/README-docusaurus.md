@@ -85,9 +85,8 @@ This monorepo contains a complete AI tutoring ecosystem with:
 
 ## 📚 Documentation
 
-- **[Tech Design](./docs/tech_design/)**: Architecture decisions and system design
-- **[API Documentation](./docs/api_documentation/)**: Service APIs and integration guides
-- **[Deployment Guide](./infrastructure/)**: Kubernetes and cloud deployment instructions
+- **[Tech Design](/tech_design/架构设计)**: Architecture decisions and system design
+- **[API Documentation](/api_documentation/intro)**: Service APIs and integration guides
 
 ## 🛠️ Development
 
