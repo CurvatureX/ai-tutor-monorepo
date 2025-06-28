@@ -3,6 +3,7 @@ import clsx from "clsx";
 import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
+import { useEffect, useState } from "react";
 
 import styles from "./index.module.css";
 
@@ -27,219 +28,54 @@ function HomepageHeader() {
 }
 
 function ReadmeContent() {
+  const [readmeContent, setReadmeContent] = useState<string>("");
+  const { siteConfig } = useDocusaurusContext();
+
+  useEffect(() => {
+    // Fetch the README.md from the static folder
+    fetch(`${siteConfig.baseUrl}README.md`)
+      .then((response) => response.text())
+      .then((text) => setReadmeContent(text))
+      .catch(() => {
+        setReadmeContent("# README.md content could not be loaded");
+      });
+  }, [siteConfig.baseUrl]);
+
+  // Simple markdown to HTML converter for basic elements
+  const markdownToHtml = (markdown: string) => {
+    return markdown
+      .replace(/^# (.*$)/gim, "<h1>$1</h1>")
+      .replace(/^## (.*$)/gim, "<h2>$1</h2>")
+      .replace(/^### (.*$)/gim, "<h3>$1</h3>")
+      .replace(/^\* (.*$)/gim, "<li>$1</li>")
+      .replace(/^- (.*$)/gim, "<li>$1</li>")
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      .replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>")
+      .replace(/`(.*?)`/g, "<code>$1</code>")
+      .replace(/^\d+\. (.*$)/gim, "<li>$1</li>")
+      .replace(/\n\n/g, "</p><p>")
+      .replace(/^(?!<[h|l|p])/gm, "<p>")
+      .replace(/(?!<\/[h|l|p])$/gm, "</p>")
+      .replace(/<p><\/p>/g, "")
+      .replace(/<p>(<[h|l])/g, "$1")
+      .replace(/(<\/[h|l]>)<\/p>/g, "$1")
+      .replace(/<li>/g, "<ul><li>")
+      .replace(/<\/li>/g, "</li></ul>")
+      .replace(/<\/ul><ul>/g, "");
+  };
+
   return (
     <section className={styles.readme}>
       <div className="container">
         <div className="row">
           <div className="col col--12">
-            <div className={styles.readmeContent}>
-              <h1>AI Tutor Monorepo</h1>
-
-              <p>
-                A comprehensive AI-powered tutoring platform built with
-                microservices architecture, supporting multiple client
-                applications and real-time learning experiences.
-              </p>
-
-              <h2>🏗️ Architecture Overview</h2>
-
-              <p>
-                This monorepo contains a complete AI tutoring ecosystem with:
-              </p>
-
-              <ul>
-                <li>
-                  <strong>Multiple Client Applications</strong>: Flutter mobile
-                  app and Unity 3D immersive learning environments
-                </li>
-                <li>
-                  <strong>Microservices Backend</strong>: Scalable services for
-                  user management, conversations, speech processing, analytics,
-                  and notifications
-                </li>
-                <li>
-                  <strong>Shared Infrastructure</strong>: Common protocols,
-                  configurations, and utilities
-                </li>
-                <li>
-                  <strong>DevOps & Deployment</strong>: Kubernetes, Helm charts,
-                  monitoring, and CI/CD pipelines
-                </li>
-              </ul>
-
-              <h2>📱 Client Applications</h2>
-
-              <div className="row">
-                <div className="col col--6">
-                  <h3>Flutter Mobile App</h3>
-                  <ul>
-                    <li>
-                      Cross-platform mobile application for iOS and Android
-                    </li>
-                    <li>Real-time chat interface with AI tutors</li>
-                    <li>Voice interaction capabilities</li>
-                    <li>Progress tracking and analytics</li>
-                  </ul>
-                </div>
-                <div className="col col--6">
-                  <h3>Unity 3D Application</h3>
-                  <ul>
-                    <li>Immersive 3D learning environments</li>
-                    <li>Interactive educational content</li>
-                    <li>Gamified learning experiences</li>
-                    <li>VR/AR support capabilities</li>
-                  </ul>
-                </div>
-              </div>
-
-              <h2>🔧 Backend Services</h2>
-
-              <div className="row">
-                <div className="col col--6">
-                  <h3>Core Services</h3>
-                  <ul>
-                    <li>
-                      <strong>User Service</strong>: Authentication, user
-                      profiles, and account management
-                    </li>
-                    <li>
-                      <strong>Conversation Service</strong>: AI-powered chat and
-                      tutoring logic
-                    </li>
-                    <li>
-                      <strong>Speech Service</strong>: Voice recognition and
-                      text-to-speech processing
-                    </li>
-                    <li>
-                      <strong>Analytics Service</strong>: Learning progress
-                      tracking and insights
-                    </li>
-                    <li>
-                      <strong>Notification Service</strong>: Real-time alerts
-                      and messaging
-                    </li>
-                  </ul>
-                </div>
-                <div className="col col--6">
-                  <h3>Infrastructure</h3>
-                  <ul>
-                    <li>
-                      <strong>API Gateway</strong>: Request routing and load
-                      balancing
-                    </li>
-                    <li>
-                      <strong>Shared Protocols</strong>: gRPC definitions and
-                      common data models
-                    </li>
-                    <li>
-                      <strong>Monitoring</strong>: Observability and performance
-                      tracking
-                    </li>
-                    <li>
-                      <strong>Database</strong>: User data, conversation
-                      history, and analytics storage
-                    </li>
-                  </ul>
-                </div>
-              </div>
-
-              <h2>🚀 Quick Start</h2>
-
-              <h3>Prerequisites</h3>
-              <ul>
-                <li>Docker and Docker Compose</li>
-                <li>Kubernetes cluster (for production)</li>
-                <li>Go 1.19+ (for gateway and notification service)</li>
-                <li>Python 3.9+ (for AI services)</li>
-                <li>Flutter SDK (for mobile development)</li>
-                <li>Unity 2022.3+ (for 3D application)</li>
-              </ul>
-
-              <h3>Development Setup</h3>
-              <ol>
-                <li>
-                  <strong>Clone the repository</strong>
-                  <pre>
-                    <code>
-                      git clone
-                      https://github.com/your-org/ai-tutor-monorepo.git{"\n"}cd
-                      ai-tutor-monorepo
-                    </code>
-                  </pre>
-                </li>
-                <li>
-                  <strong>Start backend services</strong>
-                  <pre>
-                    <code>docker-compose up -d</code>
-                  </pre>
-                </li>
-                <li>
-                  <strong>Run Flutter app</strong>
-                  <pre>
-                    <code>
-                      cd clients/flutter-app{"\n"}flutter pub get{"\n"}flutter
-                      run
-                    </code>
-                  </pre>
-                </li>
-                <li>
-                  <strong>Open Unity project</strong>
-                  <pre>
-                    <code># Open clients/unity-3d in Unity Editor</code>
-                  </pre>
-                </li>
-              </ol>
-
-              <h2>📚 Documentation</h2>
-
-              <div className="row">
-                <div className="col col--4">
-                  <div className={styles.docCard}>
-                    <h3>
-                      <Link to="/tech_design/架构设计">Tech Design</Link>
-                    </h3>
-                    <p>Architecture decisions and system design</p>
-                  </div>
-                </div>
-                <div className="col col--4">
-                  <div className={styles.docCard}>
-                    <h3>
-                      <Link to="/api_documentation/intro">
-                        API Documentation
-                      </Link>
-                    </h3>
-                    <p>Service APIs and integration guides</p>
-                  </div>
-                </div>
-                <div className="col col--4">
-                  <div className={styles.docCard}>
-                    <h3>Infrastructure</h3>
-                    <p>Kubernetes and cloud deployment instructions</p>
-                  </div>
-                </div>
-              </div>
-
-              <h2>🛠️ Development</h2>
-
-              <h3>Project Structure</h3>
-              <pre>
-                <code>{`├── clients/           # Client applications
-│   ├── flutter-app/   # Mobile application
-│   └── unity-3d/      # 3D learning environment
-├── services/          # Backend microservices
-├── gateway/           # API gateway
-├── shared/            # Common code and protocols
-├── infrastructure/    # Deployment configurations
-└── tools/             # Development and build tools`}</code>
-              </pre>
-
-              <div className="margin-top--lg">
-                <p>
-                  <strong>CurvTech Inc.</strong> - Building the future of
-                  AI-powered education
-                </p>
-              </div>
-            </div>
+            <div
+              className={styles.readmeContent}
+              dangerouslySetInnerHTML={{
+                __html: markdownToHtml(readmeContent),
+              }}
+            />
           </div>
         </div>
       </div>
