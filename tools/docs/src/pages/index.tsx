@@ -4,6 +4,8 @@ import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import styles from "./index.module.css";
 
@@ -41,41 +43,58 @@ function ReadmeContent() {
       });
   }, [siteConfig.baseUrl]);
 
-  // Simple markdown to HTML converter for basic elements
-  const markdownToHtml = (markdown: string) => {
-    return markdown
-      .replace(/^# (.*$)/gim, "<h1>$1</h1>")
-      .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-      .replace(/^### (.*$)/gim, "<h3>$1</h3>")
-      .replace(/^\* (.*$)/gim, "<li>$1</li>")
-      .replace(/^- (.*$)/gim, "<li>$1</li>")
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      .replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>")
-      .replace(/`(.*?)`/g, "<code>$1</code>")
-      .replace(/^\d+\. (.*$)/gim, "<li>$1</li>")
-      .replace(/\n\n/g, "</p><p>")
-      .replace(/^(?!<[h|l|p])/gm, "<p>")
-      .replace(/(?!<\/[h|l|p])$/gm, "</p>")
-      .replace(/<p><\/p>/g, "")
-      .replace(/<p>(<[h|l])/g, "$1")
-      .replace(/(<\/[h|l]>)<\/p>/g, "$1")
-      .replace(/<li>/g, "<ul><li>")
-      .replace(/<\/li>/g, "</li></ul>")
-      .replace(/<\/ul><ul>/g, "");
-  };
-
   return (
     <section className={styles.readme}>
       <div className="container">
         <div className="row">
           <div className="col col--12">
-            <div
-              className={styles.readmeContent}
-              dangerouslySetInnerHTML={{
-                __html: markdownToHtml(readmeContent),
-              }}
-            />
+            <div className={styles.readmeContent}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // Custom components for better styling
+                  h1: ({ children }) => (
+                    <h1 className="markdown-h1">{children}</h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 className="markdown-h2">{children}</h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="markdown-h3">{children}</h3>
+                  ),
+                  code: (props) => {
+                    const { children, className, ...rest } = props;
+                    const match = /language-(\w+)/.exec(className || "");
+                    return (
+                      <code className="markdown-inline-code" {...rest}>
+                        {children}
+                      </code>
+                    );
+                  },
+                  pre: ({ children }) => (
+                    <pre className="markdown-pre">{children}</pre>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="markdown-ul">{children}</ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="markdown-ol">{children}</ol>
+                  ),
+                  li: ({ children }) => (
+                    <li className="markdown-li">{children}</li>
+                  ),
+                  p: ({ children }) => <p className="markdown-p">{children}</p>,
+                  strong: ({ children }) => (
+                    <strong className="markdown-strong">{children}</strong>
+                  ),
+                  em: ({ children }) => (
+                    <em className="markdown-em">{children}</em>
+                  ),
+                }}
+              >
+                {readmeContent}
+              </ReactMarkdown>
+            </div>
           </div>
         </div>
       </div>
