@@ -1,11 +1,10 @@
 import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
-import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'AI Tutor Tech Documentation',
+  title: 'CurvTech',
   tagline: 'Documentation for AI Tutor',
   favicon: 'img/favicon.ico',
 
@@ -40,26 +39,33 @@ const config: Config = {
     [
       'classic',
       {
-        docs: {
-          sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-        },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Please change this to your repo.
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        docs: false, // Disable the default docs plugin
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
-      } satisfies Preset.Options,
+      },
+    ],
+  ],
+
+  plugins: [
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'tech_design',
+        path: '../../docs/tech_design',
+        routeBasePath: 'tech_design',
+        sidebarPath: './sidebars.ts',
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'api_documentation',
+        path: '../../docs/api_documentation',
+        routeBasePath: 'api_documentation',
+        sidebarPath: './sidebars.ts',
+      },
     ],
   ],
 
@@ -67,19 +73,26 @@ const config: Config = {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
     navbar: {
-      title: 'AI Tutor Tech Documentation',
+      title: 'CurvTech',
       logo: {
         alt: 'My Site Logo',
         src: 'img/logo.svg',
       },
       items: [
         {
-          type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
+          type: 'doc',
+          docId: '架构设计',
+          docsPluginId: 'tech_design',
           position: 'left',
-          label: 'Tutorial',
+          label: 'Tech Design',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
+        {
+          type: 'doc',
+          docId: 'intro',
+          docsPluginId: 'api_documentation',
+          position: 'left',
+          label: 'API Documentation',
+        },
         {
           href: 'https://github.com/CurvatureX/ai-tutor-monorepo',
           label: 'GitHub',
@@ -94,8 +107,12 @@ const config: Config = {
           title: 'Docs',
           items: [
             {
-              label: 'Tutorial',
-              to: '/docs/intro',
+              label: 'Tech Design',
+              to: '/tech_design/架构设计',
+            },
+            {
+              label: 'API Documentation',
+              to: '/api_documentation/intro',
             },
           ],
         },
@@ -103,23 +120,19 @@ const config: Config = {
           title: 'More',
           items: [
             {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
               label: 'GitHub',
-              href: 'https://github.com/facebook/docusaurus',
+              href: 'https://github.com/CurvatureX/ai-tutor-monorepo',
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} , CurvTech Inc.`,
     },
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
     },
-  } satisfies Preset.ThemeConfig,
+  },
   trailingSlash: true,
 };
 
