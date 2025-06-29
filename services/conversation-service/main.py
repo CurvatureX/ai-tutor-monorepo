@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 import uvicorn
 import os
 import json
@@ -22,6 +23,7 @@ from models.openai_models import (
 from services.ai_service import AIService
 from services.auth_service import AuthService
 from config.settings import Settings
+from doubao_client import DoubaoClient
 
 # Initialize settings
 settings = Settings()
@@ -29,7 +31,7 @@ settings = Settings()
 # Initialize FastAPI app
 app = FastAPI(
     title="AI Tutor Conversation Service",
-    description="OpenAI-compatible API for AI tutoring conversations using local models",
+    description="Unified API for AI tutoring conversations - supports both OpenAI-compatible API and Doubao API",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -50,6 +52,25 @@ security = HTTPBearer()
 # Initialize services
 ai_service = AIService(settings)
 auth_service = AuthService(settings)
+doubao_client = DoubaoClient()
+
+
+# Doubao API models
+class ConversationRequest(BaseModel):
+    """对话请求模型"""
+
+    message: str
+    user_id: str
+    model: Optional[str] = "doubao-seed-1-6-250615"
+
+
+class MultimodalConversationRequest(BaseModel):
+    """多模态对话请求模型"""
+
+    text: str
+    image_url: str
+    user_id: str
+    model: Optional[str] = "doubao-seed-1-6-250615"
 
 
 @app.on_event("startup")
@@ -58,6 +79,7 @@ async def startup_event():
     await ai_service.initialize()
     print(f"🚀 Conversation Service started on port {settings.port}")
     print(f"📚 Using local AI model: {settings.use_local_model}")
+    print(f"🎯 Supporting both OpenAI-compatible and Doubao APIs")
 
 
 @app.on_event("shutdown")
@@ -86,7 +108,8 @@ async def root():
         "service": "AI Tutor Conversation Service",
         "version": "1.0.0",
         "status": "healthy",
-        "backend": "Local AI Models",
+        "apis": ["OpenAI-compatible", "Doubao"],
+        "backend": "Local AI Models + Doubao",
         "timestamp": datetime.utcnow().isoformat(),
     }
 
@@ -99,13 +122,20 @@ async def health_check():
         "services": {
             "ai_service": await ai_service.health_check(),
             "auth_service": await auth_service.health_check(),
+            "doubao_service": True,
         },
         "config": {
             "use_local_model": settings.use_local_model,
             "model_name": settings.model_name,
+            "doubao_available": True,
         },
         "timestamp": datetime.utcnow().isoformat(),
     }
+
+
+# =============================================================================
+# OpenAI-Compatible API Endpoints
+# =============================================================================
 
 
 @app.get("/v1/models", response_model=ModelList)
@@ -130,6 +160,12 @@ async def list_models(user=Depends(get_current_user)):
             created=int(datetime.utcnow().timestamp()),
             owned_by="ai-tutor",
         ),
+        Model(
+            id="doubao-seed-1-6-250615",
+            object="model",
+            created=int(datetime.utcnow().timestamp()),
+            owned_by="doubao",
+        ),
     ]
     return ModelList(object="list", data=models)
 
@@ -152,7 +188,51 @@ async def create_chat_completion(
 ):
     """Create a chat completion (OpenAI compatible)"""
     try:
-        # Generate completion using AI service
+        # Check if this is a Doubao model request
+        if request.model == "doubao-seed-1-6-250615":
+            # Use Doubao API for this model
+            user_message = request.messages[-1].content if request.messages else ""
+            doubao_response_text = doubao_client.simple_chat(
+                user_message, request.model
+            )
+            doubao_response = {
+                "content": doubao_response_text,
+                "usage": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                },
+            }
+
+            response = ChatCompletionResponse(
+                id=f"chatcmpl-{str(uuid.uuid4())}",
+                object="chat.completion",
+                created=int(datetime.utcnow().timestamp()),
+                model=request.model,
+                choices=[
+                    ChatCompletionChoice(
+                        index=0,
+                        message=ChatMessage(
+                            role="assistant", content=doubao_response["content"]
+                        ),
+                        finish_reason="stop",
+                    )
+                ],
+                usage=Usage(
+                    prompt_tokens=doubao_response.get("usage", {}).get(
+                        "prompt_tokens", 0
+                    ),
+                    completion_tokens=doubao_response.get("usage", {}).get(
+                        "completion_tokens", 0
+                    ),
+                    total_tokens=doubao_response.get("usage", {}).get(
+                        "total_tokens", 0
+                    ),
+                ),
+            )
+            return response
+
+        # Use local AI service for other models
         completion = await ai_service.create_completion(
             messages=request.messages,
             model=request.model,
@@ -244,6 +324,111 @@ async def get_session_history(session_id: str, user=Depends(get_current_user)):
         raise HTTPException(
             status_code=500, detail=f"Error fetching session history: {str(e)}"
         )
+
+
+# =============================================================================
+# Doubao API Endpoints
+# =============================================================================
+
+
+@app.post("/conversation")
+async def create_conversation(request: ConversationRequest):
+    """
+    创建对话 - Doubao API endpoint
+
+    Args:
+        request: 包含消息、用户ID和模型的请求体
+
+    Returns:
+        包含AI回复的响应
+    """
+    try:
+        print(f"📝 Processing conversation request from user {request.user_id}")
+
+        # 调用Doubao客户端
+        response_text = doubao_client.simple_chat(
+            request.message, request.model or "doubao-seed-1-6-250615"
+        )
+        response = {"content": response_text}
+
+        print(f"✅ Got response: {response['content'][:100]}...")
+
+        return {
+            "status": "success",
+            "response": response["content"],
+            "user_id": request.user_id,
+            "model": request.model,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        print(f"❌ Error in conversation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"对话处理失败: {str(e)}")
+
+
+@app.post("/conversation/multimodal")
+async def create_multimodal_conversation(request: MultimodalConversationRequest):
+    """
+    创建多模态对话 - Doubao API endpoint
+
+    Args:
+        request: 包含文本、图片URL、用户ID和模型的请求体
+
+    Returns:
+        包含AI回复的响应
+    """
+    try:
+        print(f"🖼️ Processing multimodal conversation from user {request.user_id}")
+
+        # 调用Doubao多模态客户端
+        response = await doubao_client.chat_multimodal(
+            request.text, request.image_url, request.model
+        )
+
+        print(f"✅ Got multimodal response: {response['content'][:100]}...")
+
+        return {
+            "status": "success",
+            "response": response["content"],
+            "user_id": request.user_id,
+            "model": request.model,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        print(f"❌ Error in multimodal conversation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"多模态对话处理失败: {str(e)}")
+
+
+@app.post("/test/doubao")
+async def test_doubao_api():
+    """
+    测试Doubao API连接
+
+    Returns:
+        测试结果
+    """
+    try:
+        print("🧪 Testing Doubao API connection...")
+
+        test_message = "你好，这是一个API连接测试。"
+        response_text = doubao_client.simple_chat(test_message)
+        response = {"content": response_text}
+
+        return {
+            "status": "success",
+            "message": "Doubao API连接测试成功!",
+            "test_response": response["content"],
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        print(f"❌ Doubao API test failed: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"Doubao API连接测试失败: {str(e)}",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
 
 
 if __name__ == "__main__":
