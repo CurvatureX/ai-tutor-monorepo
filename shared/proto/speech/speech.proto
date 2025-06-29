@@ -1,0 +1,182 @@
+syntax = "proto3";
+
+package speech.v1;
+
+option go_package = "github.com/ai-tutor-monorepo/shared/proto/speech/v1;speechv1";
+
+// SpeechService provides voice conversation processing
+service SpeechService {
+  // ProcessVoiceConversation handles bidirectional streaming for voice conversations
+  // Input: stream of audio data or control messages
+  // Output: stream of ASR results, LLM responses, and TTS audio
+  rpc ProcessVoiceConversation(stream VoiceRequest) returns (stream VoiceResponse);
+  
+  // HealthCheck for service health monitoring
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// VoiceRequest represents incoming requests in the voice conversation stream
+message VoiceRequest {
+  string session_id = 1;
+  int64 timestamp = 2;
+  
+  oneof request_type {
+    AudioData audio_data = 3;
+    ControlMessage control = 4;
+  }
+}
+
+// AudioData contains audio information
+message AudioData {
+  bytes data = 1;
+  AudioFormat format = 2;
+  AudioMetadata metadata = 3;
+}
+
+// AudioFormat specifies audio format details
+message AudioFormat {
+  string codec = 1;        // e.g., "webm", "wav", "pcm"
+  int32 sample_rate = 2;   // e.g., 16000, 44100
+  int32 channels = 3;      // e.g., 1 (mono), 2 (stereo)
+  int32 bit_depth = 4;     // e.g., 16, 24
+}
+
+// AudioMetadata contains additional audio information
+message AudioMetadata {
+  int64 duration_ms = 1;
+  int32 chunk_index = 2;
+  bool is_final = 3;
+}
+
+// ControlMessage for session control
+message ControlMessage {
+  ControlAction action = 1;
+  map<string, string> params = 2;
+}
+
+enum ControlAction {
+  CONTROL_ACTION_UNSPECIFIED = 0;
+  CONTROL_ACTION_START_RECORDING = 1;
+  CONTROL_ACTION_STOP_RECORDING = 2;
+  CONTROL_ACTION_END_SESSION = 3;
+  CONTROL_ACTION_PAUSE_SESSION = 4;
+  CONTROL_ACTION_RESUME_SESSION = 5;
+}
+
+// VoiceResponse represents responses in the voice conversation stream
+message VoiceResponse {
+  string session_id = 1;
+  int64 timestamp = 2;
+  ResponseStatus status = 3;
+  
+  oneof response_type {
+    ASRResult asr_result = 4;
+    LLMResult llm_result = 5;
+    TTSResult tts_result = 6;
+    ErrorResult error = 7;
+    StatusResult status_result = 8;
+  }
+}
+
+// ASRResult contains speech recognition results
+message ASRResult {
+  string text = 1;
+  float confidence = 2;
+  bool is_final = 3;
+  int64 start_time_ms = 4;
+  int64 end_time_ms = 5;
+  repeated WordAlignment word_alignments = 6;
+}
+
+// WordAlignment provides word-level timing information
+message WordAlignment {
+  string word = 1;
+  int64 start_time_ms = 2;
+  int64 end_time_ms = 3;
+  float confidence = 4;
+}
+
+// LLMResult contains language model response
+message LLMResult {
+  string text = 1;
+  string context = 2;
+  float confidence = 3;
+  LLMResultType result_type = 4;
+  map<string, string> metadata = 5;
+}
+
+enum LLMResultType {
+  LLM_RESULT_TYPE_UNSPECIFIED = 0;
+  LLM_RESULT_TYPE_RESPONSE = 1;         // Regular conversation response
+  LLM_RESULT_TYPE_CORRECTION = 2;       // Grammar/pronunciation correction
+  LLM_RESULT_TYPE_SUGGESTION = 3;       // Learning suggestion
+  LLM_RESULT_TYPE_STARTER = 4;          // Conversation starter
+}
+
+// TTSResult contains text-to-speech output
+message TTSResult {
+  bytes audio_data = 1;
+  AudioFormat format = 2;
+  int64 duration_ms = 3;
+  bool is_final = 4;
+  int32 chunk_index = 5;
+}
+
+// ErrorResult contains error information
+message ErrorResult {
+  ErrorCode code = 1;
+  string message = 2;
+  string details = 3;
+  bool retryable = 4;
+}
+
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+  ERROR_CODE_INVALID_REQUEST = 1;
+  ERROR_CODE_AUDIO_PROCESSING_FAILED = 2;
+  ERROR_CODE_ASR_FAILED = 3;
+  ERROR_CODE_LLM_FAILED = 4;
+  ERROR_CODE_TTS_FAILED = 5;
+  ERROR_CODE_SESSION_NOT_FOUND = 6;
+  ERROR_CODE_SERVICE_UNAVAILABLE = 7;
+  ERROR_CODE_RATE_LIMITED = 8;
+}
+
+// StatusResult contains status updates
+message StatusResult {
+  ProcessingStatus processing_status = 1;
+  string message = 2;
+  map<string, string> metadata = 3;
+}
+
+enum ProcessingStatus {
+  PROCESSING_STATUS_UNSPECIFIED = 0;
+  PROCESSING_STATUS_STARTED = 1;
+  PROCESSING_STATUS_PROCESSING = 2;
+  PROCESSING_STATUS_COMPLETED = 3;
+  PROCESSING_STATUS_FAILED = 4;
+}
+
+// ResponseStatus indicates the overall status of the response
+message ResponseStatus {
+  bool success = 1;
+  string message = 2;
+  int64 processing_time_ms = 3;
+}
+
+// Health check messages
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  HealthStatus status = 1;
+  map<string, string> details = 2;
+}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTH_STATUS_SERVING = 1;
+  HEALTH_STATUS_NOT_SERVING = 2;
+  HEALTH_STATUS_SERVICE_UNKNOWN = 3;
+}

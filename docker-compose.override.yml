@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - GATEWAY_HOST=0.0.0.0
+      - GATEWAY_PORT=8080
+      - SPEECH_SERVICE_HOST=speech-service
+      - SPEECH_SERVICE_PORT=50051
+      - LOG_LEVEL=info
+    depends_on:
+      - speech-service
+    networks:
+      - voice-practice-network
+
+  speech-service:
+    build:
+      context: ./services/speech-service
+      dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=50051
+      - LOG_LEVEL=info
+      # ASR Service Configuration
+      - ASR_ACCESS_KEY=${ASR_ACCESS_KEY:-your_asr_access_key}
+      - ASR_APP_KEY=${ASR_APP_KEY:-your_asr_app_key}
+      - ASR_URL=${ASR_URL:-wss://openspeech.bytedance.com/api/v2/asr}
+      # LLM Service Configuration  
+      - LLM_API_KEY=${LLM_API_KEY:-your_llm_api_key}
+      - LLM_MODEL=${LLM_MODEL:-gpt-3.5-turbo}
+      - LLM_URL=${LLM_URL:-https://api.openai.com/v1/chat/completions}
+      # TTS Service Configuration
+      - TTS_APP_ID=${TTS_APP_ID:-your_tts_app_id}
+      - TTS_TOKEN=${TTS_TOKEN:-your_tts_token}
+      - TTS_CLUSTER=${TTS_CLUSTER:-volcano_tts}
+      - TTS_VOICE_TYPE=${TTS_VOICE_TYPE:-BV001_streaming}
+      - TTS_URL=${TTS_URL:-wss://openspeech.bytedance.com/api/v1/tts/ws_binary}
+    volumes:
+      - ./services/speech-service/debug:/app/debug
+    networks:
+      - voice-practice-network
+
+networks:
+  voice-practice-network:
+    driver: bridge

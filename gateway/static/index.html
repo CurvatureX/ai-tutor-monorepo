@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI English Practice - Gateway</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .record-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .record-btn:hover {
+            background-color: #c82333;
+        }
+        .record-btn.recording {
+            background-color: #28a745;
+        }
+        .messages {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 20px 0;
+            background-color: #f9f9f9;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .message.asr {
+            color: #007bff;
+        }
+        .message.llm {
+            color: #28a745;
+        }
+        .message.error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ AI English Practice - Gateway Test</h1>
+        <p>This page tests the WebSocket connection to the new Gateway service.</p>
+        
+        <div id="status" class="status disconnected">
+            Disconnected from Gateway
+        </div>
+        
+        <div class="controls">
+            <button id="connectBtn" onclick="connect()">Connect</button>
+            <button id="recordBtn" class="record-btn" onclick="toggleRecording()" disabled>Start Recording</button>
+            <button onclick="clearMessages()">Clear Messages</button>
+        </div>
+        
+        <div id="messages" class="messages">
+            <div>Ready to connect...</div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let sessionId = 'session_' + Date.now();
+
+        function addMessage(message, type = '') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + type;
+            messageDiv.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const recordBtn = document.getElementById('recordBtn');
+            
+            if (connected) {
+                statusDiv.textContent = 'Connected to Gateway';
+                statusDiv.className = 'status connected';
+                connectBtn.textContent = 'Disconnect';
+                recordBtn.disabled = false;
+            } else {
+                statusDiv.textContent = 'Disconnected from Gateway';
+                statusDiv.className = 'status disconnected';
+                connectBtn.textContent = 'Connect';
+                recordBtn.disabled = true;
+            }
+        }
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+                return;
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = protocol + '//' + window.location.host + '/ws?session_id=' + sessionId;
+            
+            addMessage('Connecting to: ' + wsUrl);
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = function(event) {
+                addMessage('Connected to Gateway!');
+                updateStatus(true);
+            };
+
+            ws.onmessage = function(event) {
+                if (event.data instanceof Blob) {
+                    addMessage('Received audio data (' + event.data.size + ' bytes)', 'tts');
+                    // Play audio if needed
+                } else {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.data && typeof data.data === 'object') {
+                            if (data.data.type === 'asr_result') {
+                                addMessage('ASR: ' + data.data.text + ' (confidence: ' + data.data.confidence + ')', 'asr');
+                            } else if (data.data.type === 'llm_response') {
+                                addMessage('LLM: ' + data.data.text, 'llm');
+                            } else if (data.data.type === 'tts_ready') {
+                                addMessage('TTS audio ready (format: ' + data.data.format + ')', 'tts');
+                            }
+                        } else {
+                            addMessage('Gateway: ' + (data.data || JSON.stringify(data)));
+                        }
+                    } catch (e) {
+                        addMessage('Gateway: ' + event.data);
+                    }
+                }
+            };
+
+            ws.onclose = function(event) {
+                addMessage('Gateway connection closed');
+                updateStatus(false);
+            };
+
+            ws.onerror = function(error) {
+                addMessage('Gateway connection error: ' + error, 'error');
+                updateStatus(false);
+            };
+        }
+
+        async function toggleRecording() {
+            const recordBtn = document.getElementById('recordBtn');
+            
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'audio/webm;codecs=opus'
+                    });
+                    
+                    audioChunks = [];
+                    
+                    mediaRecorder.ondataavailable = function(event) {
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                        }
+                    };
+                    
+                    mediaRecorder.onstop = function() {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        sendAudioData(audioBlob);
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    
+                    // Send start recording control
+                    sendControlMessage('start_recording');
+                    
+                    mediaRecorder.start();
+                    isRecording = true;
+                    recordBtn.textContent = 'Stop Recording';
+                    recordBtn.classList.add('recording');
+                    addMessage('Started recording...');
+                    
+                } catch (error) {
+                    addMessage('Error starting recording: ' + error, 'error');
+                }
+            } else {
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+                
+                // Send stop recording control
+                sendControlMessage('stop_recording');
+                
+                isRecording = false;
+                recordBtn.textContent = 'Start Recording';
+                recordBtn.classList.remove('recording');
+                addMessage('Stopped recording...');
+            }
+        }
+
+        function sendControlMessage(action) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const message = {
+                    type: 'control',
+                    data: {
+                        action: action
+                    },
+                    session: sessionId
+                };
+                ws.send(JSON.stringify(message));
+            }
+        }
+
+        function sendAudioData(audioBlob) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addMessage('Sending audio data (' + audioBlob.size + ' bytes)...');
+                ws.send(audioBlob);
+            }
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+
+        // Auto-connect on page load
+        window.onload = function() {
+            connect();
+        };
+    </script>
+</body>
+</html>
