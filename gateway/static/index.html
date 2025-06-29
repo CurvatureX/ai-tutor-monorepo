@@ -3,266 +3,738 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI English Practice - Gateway</title>
+    <title>AI English Speaking Practice - Gateway</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
         }
         .container {
-            background-color: white;
+            background: white;
+            border-radius: 12px;
             padding: 30px;
-            border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .status {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-            font-weight: bold;
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
         }
-        .status.connected {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
         }
-        .status.disconnected {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        .controls {
-            margin: 20px 0;
-        }
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        .header p {
+            color: #666;
             font-size: 16px;
         }
-        .record-btn {
-            background-color: #dc3545;
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .timing-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .timing-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .timing-card.active {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+        }
+        .timing-card.completed {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .timing-card.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .timing-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        .timing-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #007AFF;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary {
+            background: #007AFF;
             color: white;
         }
-        .record-btn:hover {
-            background-color: #c82333;
+        .btn-primary:hover:not(:disabled) {
+            background: #0056CC;
         }
-        .record-btn.recording {
-            background-color: #28a745;
+        .btn-danger {
+            background: #FF3B30;
+            color: white;
         }
-        .messages {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            padding: 15px;
+        .btn-danger:hover:not(:disabled) {
+            background: #D70015;
+        }
+        .btn-secondary {
+            background: #F2F2F7;
+            color: #333;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: #E5E5EA;
+        }
+        .status {
+            text-align: center;
             margin: 20px 0;
-            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .status.connected {
+            background: #D1F2EB;
+            color: #00875A;
+        }
+        .status.disconnected {
+            background: #FFEBE6;
+            color: #DE350B;
+        }
+        .status.recording {
+            background: #FFF4E6;
+            color: #FF8B00;
+        }
+        .chat {
+            margin: 30px 0;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #E5E5EA;
+            border-radius: 8px;
+            padding: 20px;
+            background: #FAFAFA;
         }
         .message {
-            margin: 5px 0;
-            padding: 5px;
+            margin: 15px 0;
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 80%;
+            word-wrap: break-word;
+            position: relative;
         }
-        .message.asr {
-            color: #007bff;
+        .message.user {
+            background: #007AFF;
+            color: white;
+            margin-left: auto;
         }
-        .message.llm {
-            color: #28a745;
+        .message.ai {
+            background: white;
+            border: 1px solid #E5E5EA;
+            color: #333;
         }
-        .message.error {
-            color: #dc3545;
+        .message.system {
+            background: #F2F2F7;
+            color: #666;
+            text-align: center;
+            margin: 10px auto;
+            font-style: italic;
+        }
+        .message .timestamp {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        .message .confidence {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .message .timing {
+            font-size: 11px;
+            color: #007AFF;
+            margin-top: 5px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        }
+        .recording-indicator {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .recording-indicator.active {
+            display: block;
+        }
+        .pulse {
+            width: 20px;
+            height: 20px;
+            background: #FF3B30;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 1s infinite;
+            margin-right: 10px;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .audio-player {
+            margin: 10px 0;
+            width: 100%;
+        }
+        .error {
+            background: #FFEBE6;
+            color: #DE350B;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .module-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #007AFF;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎙️ AI English Practice - Gateway Test</h1>
-        <p>This page tests the WebSocket connection to the new Gateway service.</p>
-        
+        <div class="header">
+            <h1>🎯 AI English Speaking Practice - Gateway</h1>
+            <p>Practice your English conversation skills with AI assistance and debug timing</p>
+        </div>
+
+        <div class="debug-info">
+            <strong>Debug Info:</strong> Session ID: <span id="sessionId"></span> | WebSocket: <span id="wsStatus">Disconnected</span>
+        </div>
+
+        <div class="timing-info">
+            <div class="timing-card" id="asrTiming">
+                <div class="timing-label">ASR Processing</div>
+                <div class="timing-value" id="asrTime">-</div>
+            </div>
+            <div class="timing-card" id="llmTiming">
+                <div class="timing-label">LLM Response</div>
+                <div class="timing-value" id="llmTime">-</div>
+            </div>
+            <div class="timing-card" id="ttsTiming">
+                <div class="timing-label">TTS Generation</div>
+                <div class="timing-value" id="ttsTime">-</div>
+            </div>
+            <div class="timing-card" id="totalTiming">
+                <div class="timing-label">Total Pipeline</div>
+                <div class="timing-value" id="totalTime">-</div>
+            </div>
+        </div>
+
+        <div class="module-stats">
+            <div class="stat-item">
+                <div class="stat-value" id="totalRequests">0</div>
+                <div class="stat-label">Total Requests</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="avgResponse">-</div>
+                <div class="stat-label">Avg Response (ms)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="errorCount">0</div>
+                <div class="stat-label">Errors</div>
+            </div>
+        </div>
+
         <div id="status" class="status disconnected">
-            Disconnected from Gateway
+            Disconnected - Click Connect to start
         </div>
-        
+
         <div class="controls">
-            <button id="connectBtn" onclick="connect()">Connect</button>
-            <button id="recordBtn" class="record-btn" onclick="toggleRecording()" disabled>Start Recording</button>
-            <button onclick="clearMessages()">Clear Messages</button>
+            <button id="connectBtn" class="btn btn-primary">Connect</button>
+            <button id="disconnectBtn" class="btn btn-secondary" disabled>Disconnect</button>
+            <button id="recordBtn" class="btn btn-primary" disabled>🎤 Start Recording</button>
+            <button id="stopBtn" class="btn btn-danger" disabled>⏹️ Stop Recording</button>
+            <button id="clearBtn" class="btn btn-secondary">Clear Chat</button>
         </div>
-        
-        <div id="messages" class="messages">
-            <div>Ready to connect...</div>
+
+        <div id="recordingIndicator" class="recording-indicator">
+            <div class="pulse"></div>
+            <span>Recording... Speak now!</span>
+        </div>
+
+        <div id="chat" class="chat">
+            <div class="message system">
+                Welcome! Connect to the gateway server and start practicing your English conversation skills.
+                This interface shows timing information for each processing step to help with debugging.
+            </div>
         </div>
     </div>
 
     <script>
-        let ws = null;
-        let isRecording = false;
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let sessionId = 'session_' + Date.now();
-
-        function addMessage(message, type = '') {
-            const messagesDiv = document.getElementById('messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message ' + type;
-            messageDiv.textContent = new Date().toLocaleTimeString() + ': ' + message;
-            messagesDiv.appendChild(messageDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        function updateStatus(connected) {
-            const statusDiv = document.getElementById('status');
-            const connectBtn = document.getElementById('connectBtn');
-            const recordBtn = document.getElementById('recordBtn');
-            
-            if (connected) {
-                statusDiv.textContent = 'Connected to Gateway';
-                statusDiv.className = 'status connected';
-                connectBtn.textContent = 'Disconnect';
-                recordBtn.disabled = false;
-            } else {
-                statusDiv.textContent = 'Disconnected from Gateway';
-                statusDiv.className = 'status disconnected';
-                connectBtn.textContent = 'Connect';
-                recordBtn.disabled = true;
-            }
-        }
-
-        function connect() {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.close();
-                return;
+        class GatewayVoicePracticeApp {
+            constructor() {
+                this.ws = null;
+                this.mediaRecorder = null;
+                this.audioStream = null;
+                this.isConnected = false;
+                this.isRecording = false;
+                this.sessionId = this.generateSessionId();
+                this.stats = {
+                    totalRequests: 0,
+                    totalResponseTime: 0,
+                    errors: 0
+                };
+                this.currentRequest = {
+                    startTime: null,
+                    asrStartTime: null,
+                    llmStartTime: null,
+                    ttsStartTime: null
+                };
+                
+                this.initializeElements();
+                this.bindEvents();
+                this.updateSessionInfo();
             }
 
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = protocol + '//' + window.location.host + '/ws?session_id=' + sessionId;
-            
-            addMessage('Connecting to: ' + wsUrl);
-            ws = new WebSocket(wsUrl);
+            initializeElements() {
+                this.statusEl = document.getElementById('status');
+                this.chatEl = document.getElementById('chat');
+                this.connectBtn = document.getElementById('connectBtn');
+                this.disconnectBtn = document.getElementById('disconnectBtn');
+                this.recordBtn = document.getElementById('recordBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.clearBtn = document.getElementById('clearBtn');
+                this.recordingIndicator = document.getElementById('recordingIndicator');
+                
+                // Timing elements
+                this.asrTimingEl = document.getElementById('asrTiming');
+                this.llmTimingEl = document.getElementById('llmTiming');
+                this.ttsTimingEl = document.getElementById('ttsTiming');
+                this.totalTimingEl = document.getElementById('totalTiming');
+                
+                this.asrTimeEl = document.getElementById('asrTime');
+                this.llmTimeEl = document.getElementById('llmTime');
+                this.ttsTimeEl = document.getElementById('ttsTime');
+                this.totalTimeEl = document.getElementById('totalTime');
+                
+                // Stats elements
+                this.totalRequestsEl = document.getElementById('totalRequests');
+                this.avgResponseEl = document.getElementById('avgResponse');
+                this.errorCountEl = document.getElementById('errorCount');
+            }
 
-            ws.onopen = function(event) {
-                addMessage('Connected to Gateway!');
-                updateStatus(true);
-            };
+            bindEvents() {
+                this.connectBtn.addEventListener('click', () => this.connect());
+                this.disconnectBtn.addEventListener('click', () => this.disconnect());
+                this.recordBtn.addEventListener('click', () => this.startRecording());
+                this.stopBtn.addEventListener('click', () => this.stopRecording());
+                this.clearBtn.addEventListener('click', () => this.clearChat());
+            }
 
-            ws.onmessage = function(event) {
-                if (event.data instanceof Blob) {
-                    addMessage('Received audio data (' + event.data.size + ' bytes)', 'tts');
-                    // Play audio if needed
+            generateSessionId() {
+                return 'gateway_session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            updateSessionInfo() {
+                document.getElementById('sessionId').textContent = this.sessionId;
+                document.getElementById('wsStatus').textContent = this.isConnected ? 'Connected' : 'Disconnected';
+            }
+
+            updateStatus(message, className) {
+                this.statusEl.textContent = message;
+                this.statusEl.className = `status ${className}`;
+            }
+
+            updateStats() {
+                this.totalRequestsEl.textContent = this.stats.totalRequests;
+                this.errorCountEl.textContent = this.stats.errors;
+                
+                if (this.stats.totalRequests > 0) {
+                    const avgTime = Math.round(this.stats.totalResponseTime / this.stats.totalRequests);
+                    this.avgResponseEl.textContent = avgTime + 'ms';
                 } else {
-                    try {
-                        const data = JSON.parse(event.data);
-                        if (data.data && typeof data.data === 'object') {
-                            if (data.data.type === 'asr_result') {
-                                addMessage('ASR: ' + data.data.text + ' (confidence: ' + data.data.confidence + ')', 'asr');
-                            } else if (data.data.type === 'llm_response') {
-                                addMessage('LLM: ' + data.data.text, 'llm');
-                            } else if (data.data.type === 'tts_ready') {
-                                addMessage('TTS audio ready (format: ' + data.data.format + ')', 'tts');
-                            }
-                        } else {
-                            addMessage('Gateway: ' + (data.data || JSON.stringify(data)));
-                        }
-                    } catch (e) {
-                        addMessage('Gateway: ' + event.data);
-                    }
+                    this.avgResponseEl.textContent = '-';
                 }
-            };
+            }
 
-            ws.onclose = function(event) {
-                addMessage('Gateway connection closed');
-                updateStatus(false);
-            };
+            resetTimingDisplay() {
+                this.asrTimeEl.textContent = '-';
+                this.llmTimeEl.textContent = '-';
+                this.ttsTimeEl.textContent = '-';
+                this.totalTimeEl.textContent = '-';
+                
+                [this.asrTimingEl, this.llmTimingEl, this.ttsTimingEl, this.totalTimingEl].forEach(el => {
+                    el.classList.remove('active', 'completed', 'error');
+                });
+            }
 
-            ws.onerror = function(error) {
-                addMessage('Gateway connection error: ' + error, 'error');
-                updateStatus(false);
-            };
-        }
+            updateTimingDisplay(module, time, status = 'completed') {
+                const timeEl = document.getElementById(module + 'Time');
+                const cardEl = document.getElementById(module + 'Timing');
+                
+                if (timeEl) {
+                    timeEl.textContent = time + 'ms';
+                }
+                
+                if (cardEl) {
+                    cardEl.classList.remove('active', 'completed', 'error');
+                    cardEl.classList.add(status);
+                }
+            }
 
-        async function toggleRecording() {
-            const recordBtn = document.getElementById('recordBtn');
-            
-            if (!isRecording) {
+            setModuleActive(module) {
+                const cardEl = document.getElementById(module + 'Timing');
+                if (cardEl) {
+                    cardEl.classList.remove('completed', 'error');
+                    cardEl.classList.add('active');
+                }
+            }
+
+            addMessage(text, type = 'system', metadata = {}) {
+                const messageEl = document.createElement('div');
+                messageEl.className = `message ${type}`;
+                
+                let content = `<div>${text}</div>`;
+                
+                if (metadata.confidence) {
+                    content += `<div class="confidence">Confidence: ${(metadata.confidence * 100).toFixed(1)}%</div>`;
+                }
+                
+                if (metadata.timing) {
+                    content += `<div class="timing">${metadata.timing}</div>`;
+                }
+                
+                content += `<div class="timestamp">${new Date().toLocaleTimeString()}</div>`;
+                messageEl.innerHTML = content;
+                
+                this.chatEl.appendChild(messageEl);
+                this.chatEl.scrollTop = this.chatEl.scrollHeight;
+            }
+
+            addAudioMessage(audioData, type = 'ai', metadata = {}) {
+                const messageEl = document.createElement('div');
+                messageEl.className = `message ${type}`;
+                
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.className = 'audio-player';
+                
+                const blob = new Blob([audioData], { type: 'audio/mp3' });
+                audio.src = URL.createObjectURL(blob);
+                
+                messageEl.appendChild(audio);
+                
+                if (metadata.timing) {
+                    const timingDiv = document.createElement('div');
+                    timingDiv.className = 'timing';
+                    timingDiv.textContent = metadata.timing;
+                    messageEl.appendChild(timingDiv);
+                }
+                
+                const timestamp = document.createElement('div');
+                timestamp.className = 'timestamp';
+                timestamp.textContent = new Date().toLocaleTimeString();
+                messageEl.appendChild(timestamp);
+                
+                this.chatEl.appendChild(messageEl);
+                this.chatEl.scrollTop = this.chatEl.scrollHeight;
+                
+                audio.play().catch(e => console.log('Auto-play failed:', e));
+            }
+
+            showError(message) {
+                const errorEl = document.createElement('div');
+                errorEl.className = 'error';
+                errorEl.textContent = message;
+                this.chatEl.appendChild(errorEl);
+                this.chatEl.scrollTop = this.chatEl.scrollHeight;
+                
+                this.stats.errors++;
+                this.updateStats();
+                
+                setTimeout(() => {
+                    if (errorEl.parentNode) {
+                        errorEl.parentNode.removeChild(errorEl);
+                    }
+                }, 5000);
+            }
+
+            clearChat() {
+                this.chatEl.innerHTML = '<div class="message system">Chat cleared. Ready for new conversation.</div>';
+                this.resetTimingDisplay();
+            }
+
+            async connect() {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream, {
-                        mimeType: 'audio/webm;codecs=opus'
-                    });
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${protocol}//${window.location.host}/ws?session_id=${this.sessionId}`;
                     
-                    audioChunks = [];
+                    this.updateStatus('Connecting...', 'disconnected');
                     
-                    mediaRecorder.ondataavailable = function(event) {
-                        if (event.data.size > 0) {
-                            audioChunks.push(event.data);
+                    this.ws = new WebSocket(wsUrl);
+                    
+                    this.ws.onopen = () => {
+                        this.isConnected = true;
+                        this.updateStatus('Connected - Ready to practice!', 'connected');
+                        this.connectBtn.disabled = true;
+                        this.disconnectBtn.disabled = false;
+                        this.recordBtn.disabled = false;
+                        this.updateSessionInfo();
+                        this.addMessage('Connected to Gateway! You can now start recording your voice.', 'system');
+                    };
+                    
+                    this.ws.onmessage = (event) => {
+                        if (event.data instanceof Blob) {
+                            this.handleAudioMessage(event.data);
+                        } else {
+                            this.handleTextMessage(JSON.parse(event.data));
                         }
                     };
                     
-                    mediaRecorder.onstop = function() {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                        sendAudioData(audioBlob);
-                        stream.getTracks().forEach(track => track.stop());
+                    this.ws.onclose = () => {
+                        this.isConnected = false;
+                        this.updateStatus('Disconnected', 'disconnected');
+                        this.connectBtn.disabled = false;
+                        this.disconnectBtn.disabled = true;
+                        this.recordBtn.disabled = true;
+                        this.stopBtn.disabled = true;
+                        this.updateSessionInfo();
+                        if (this.isRecording) {
+                            this.stopRecording();
+                        }
+                        this.addMessage('Gateway connection closed', 'system');
                     };
                     
-                    // Send start recording control
-                    sendControlMessage('start_recording');
-                    
-                    mediaRecorder.start();
-                    isRecording = true;
-                    recordBtn.textContent = 'Stop Recording';
-                    recordBtn.classList.add('recording');
-                    addMessage('Started recording...');
+                    this.ws.onerror = (error) => {
+                        this.showError('WebSocket error: ' + error.message);
+                    };
                     
                 } catch (error) {
-                    addMessage('Error starting recording: ' + error, 'error');
+                    this.showError('Failed to connect: ' + error.message);
                 }
-            } else {
-                if (mediaRecorder && mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
+            }
+
+            disconnect() {
+                if (this.ws) {
+                    this.ws.close();
+                }
+                if (this.isRecording) {
+                    this.stopRecording();
+                }
+            }
+
+            handleTextMessage(message) {
+                console.log('Received message:', message);
+                
+                switch (message.type) {
+                    case 'text':
+                        if (typeof message.data === 'object') {
+                            switch (message.data.type) {
+                                case 'asr_result':
+                                    if (message.data.text) {
+                                        const asrTime = Date.now() - this.currentRequest.asrStartTime;
+                                        this.updateTimingDisplay('asr', asrTime);
+                                        
+                                        this.addMessage(message.data.text, 'user', {
+                                            confidence: message.data.confidence,
+                                            timing: `ASR: ${asrTime}ms`
+                                        });
+                                        
+                                        this.currentRequest.llmStartTime = Date.now();
+                                        this.setModuleActive('llm');
+                                    }
+                                    break;
+                                case 'llm_response':
+                                    const llmTime = Date.now() - this.currentRequest.llmStartTime;
+                                    this.updateTimingDisplay('llm', llmTime);
+                                    
+                                    this.addMessage(message.data.text, 'ai', {
+                                        timing: `LLM: ${llmTime}ms`
+                                    });
+                                    
+                                    this.currentRequest.ttsStartTime = Date.now();
+                                    this.setModuleActive('tts');
+                                    break;
+                                case 'tts_ready':
+                                    const ttsTime = Date.now() - this.currentRequest.ttsStartTime;
+                                    this.updateTimingDisplay('tts', ttsTime);
+                                    
+                                    const totalTime = Date.now() - this.currentRequest.startTime;
+                                    this.updateTimingDisplay('total', totalTime);
+                                    
+                                    this.stats.totalRequests++;
+                                    this.stats.totalResponseTime += totalTime;
+                                    this.updateStats();
+                                    
+                                    console.log('TTS audio ready, format:', message.data.format);
+                                    break;
+                            }
+                        } else {
+                            this.addMessage(message.data, 'ai');
+                        }
+                        break;
+                    case 'error':
+                        this.showError(message.data);
+                        [this.asrTimingEl, this.llmTimingEl, this.ttsTimingEl, this.totalTimingEl].forEach(el => {
+                            if (el.classList.contains('active')) {
+                                el.classList.remove('active');
+                                el.classList.add('error');
+                            }
+                        });
+                        break;
+                }
+            }
+
+            handleAudioMessage(audioBlob) {
+                console.log('Received audio data:', audioBlob.size, 'bytes');
+                const totalTime = Date.now() - this.currentRequest.startTime;
+                this.addAudioMessage(audioBlob, 'ai', {
+                    timing: `Total pipeline: ${totalTime}ms`
+                });
+            }
+
+            async startRecording() {
+                try {
+                    this.resetTimingDisplay();
+                    this.currentRequest.startTime = Date.now();
+                    
+                    this.audioStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            sampleRate: 16000,
+                            channelCount: 1,
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        }
+                    });
+
+                    let options;
+                    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                        options = {
+                            mimeType: 'audio/webm;codecs=opus',
+                            audioBitsPerSecond: 64000
+                        };
+                    } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                        options = {
+                            mimeType: 'audio/webm',
+                            audioBitsPerSecond: 64000
+                        };
+                    } else {
+                        options = {};
+                    }
+
+                    this.mediaRecorder = new MediaRecorder(this.audioStream, options);
+                    this.audioChunks = [];
+                    
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            this.audioChunks.push(event.data);
+                        }
+                    };
+
+                    this.mediaRecorder.onstop = () => {
+                        if (this.audioChunks.length > 0) {
+                            const mimeType = options.mimeType || 'audio/webm';
+                            const completeBlob = new Blob(this.audioChunks, { type: mimeType });
+                            
+                            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                                this.ws.send(completeBlob);
+                                this.currentRequest.asrStartTime = Date.now();
+                                this.setModuleActive('asr');
+                            }
+                        }
+                    };
+
+                    this.mediaRecorder.start(200);
+                    this.isRecording = true;
+                    
+                    this.sendControlMessage('start_recording');
+                    
+                    this.updateStatus('Recording... Speak now!', 'recording');
+                    this.recordBtn.disabled = true;
+                    this.stopBtn.disabled = false;
+                    this.recordingIndicator.classList.add('active');
+                    
+                } catch (error) {
+                    this.showError('Failed to start recording: ' + error.message);
+                }
+            }
+
+            stopRecording() {
+                if (this.mediaRecorder && this.isRecording) {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                    
+                    this.sendControlMessage('stop_recording');
+                    
+                    this.updateStatus('Connected - Ready to practice!', 'connected');
+                    this.recordBtn.disabled = false;
+                    this.stopBtn.disabled = true;
+                    this.recordingIndicator.classList.remove('active');
                 }
                 
-                // Send stop recording control
-                sendControlMessage('stop_recording');
-                
-                isRecording = false;
-                recordBtn.textContent = 'Start Recording';
-                recordBtn.classList.remove('recording');
-                addMessage('Stopped recording...');
+                if (this.audioStream) {
+                    this.audioStream.getTracks().forEach(track => track.stop());
+                    this.audioStream = null;
+                }
+            }
+
+            sendControlMessage(action) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    const message = {
+                        type: 'control',
+                        data: { action: action },
+                        session: this.sessionId
+                    };
+                    this.ws.send(JSON.stringify(message));
+                }
             }
         }
 
-        function sendControlMessage(action) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                const message = {
-                    type: 'control',
-                    data: {
-                        action: action
-                    },
-                    session: sessionId
-                };
-                ws.send(JSON.stringify(message));
-            }
-        }
-
-        function sendAudioData(audioBlob) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                addMessage('Sending audio data (' + audioBlob.size + ' bytes)...');
-                ws.send(audioBlob);
-            }
-        }
-
-        function clearMessages() {
-            document.getElementById('messages').innerHTML = '';
-        }
-
-        // Auto-connect on page load
-        window.onload = function() {
-            connect();
-        };
+        document.addEventListener('DOMContentLoaded', () => {
+            new GatewayVoicePracticeApp();
+        });
     </script>
 </body>
 </html>
