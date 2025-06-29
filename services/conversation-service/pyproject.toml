@@ -37,6 +37,8 @@ dependencies = [
     "torch>=2.1.0",
     "accelerate>=0.24.0",
     "sentencepiece>=0.1.99",
+    "requests>=2.32.4",
+    "logging>=0.4.9.6",
 ]
 
 [project.optional-dependencies]

@@ -225,89 +225,155 @@ class AIService:
         return response
 
     def _generate_tutoring_response(self, user_message: str, temperature: float) -> str:
-        """Generate educational response based on user message"""
+        """Generate intelligent English speaking learning response"""
 
         message_lower = user_message.lower()
 
-        # 数学相关
+        # 发音相关
         if any(
             word in message_lower
             for word in [
-                "数学",
-                "方程",
-                "函数",
-                "微积分",
-                "代数",
-                "math",
-                "equation",
-                "function",
+                "pronunciation",
+                "pronounce",
+                "sound",
+                "accent",
+                "发音",
+                "音标",
+                "语音",
             ]
         ):
             responses = [
-                "让我们一步步来理解这个数学概念。首先，你能告诉我你对这个问题的初步想法吗？",
-                "数学是一个非常有趣的领域！为了更好地帮助你，你能具体说明你在哪个部分遇到困难了吗？",
-                "很好的问题！让我们从基础开始。你觉得解决这类问题的第一步应该是什么？",
+                "Great question about **pronunciation**! Let's practice this sound together. Can you try saying it slowly first?",
+                "Pronunciation is key to confident speaking! Which specific sound are you having trouble with?",
+                "I'd love to help you with pronunciation. Try breaking the word into **syllables** - can you identify each part?",
+                "Perfect pronunciation takes practice! Let's work on this **sound pattern** step by step.",
             ]
 
-        # 科学相关
+        # 语法相关
+        elif any(
+            word in message_lower
+            for word in ["grammar", "tense", "verb", "noun", "sentence", "语法", "时态"]
+        ):
+            responses = [
+                "Grammar helps us communicate clearly! Let's look at this **structure** - can you identify the main parts?",
+                "Good grammar question! Instead of just memorizing rules, let's **practice using** this in a sentence. Can you try?",
+                "Understanding grammar is important, but **using it naturally** is the goal. How about we create some examples together?",
+                "Great grammar focus! Let's make this **practical** - when would you use this structure in daily conversation?",
+            ]
+
+        # 词汇相关
         elif any(
             word in message_lower
             for word in [
-                "物理",
-                "化学",
-                "生物",
-                "physics",
-                "chemistry",
-                "biology",
-                "光合作用",
-                "photosynthesis",
+                "vocabulary",
+                "word",
+                "meaning",
+                "definition",
+                "词汇",
+                "单词",
+                "意思",
             ]
         ):
             responses = [
-                "科学概念最好通过实例来理解。让我给你举个日常生活中的例子来说明这个概念...",
-                "这是一个很重要的科学概念！你能先描述一下你已经知道的相关内容吗？",
-                "为了更好地理解这个现象，我们可以从它的基本原理开始。你觉得什么是最重要的因素？",
+                "Building **vocabulary** is exciting! Do you know any related words or can you use this word in a sentence?",
+                "New words are tools for expression! Can you think of a **situation** where you'd use this word?",
+                "Great vocabulary question! Let's not just learn the **meaning** - how about we practice using it in context?",
+                "Vocabulary grows through use! Can you create a **short story** or example using this new word?",
             ]
 
-        # 编程相关
+        # 流利度和对话相关
         elif any(
             word in message_lower
-            for word in ["编程", "代码", "programming", "code", "python", "javascript"]
+            for word in [
+                "conversation",
+                "fluency",
+                "speaking",
+                "talk",
+                "discuss",
+                "对话",
+                "流利",
+                "口语",
+            ]
         ):
             responses = [
-                "编程的关键是理解逻辑和步骤。让我们分解这个问题，一步一步来解决。",
-                "很好的编程问题！你能先告诉我你想要实现什么功能吗？",
-                "编程时最重要的是思路清晰。我们先从伪代码开始，你觉得第一步应该做什么？",
+                "**Conversation practice** is the best way to improve! What topic interests you most for practicing today?",
+                "Building **fluency** takes time and practice. Let's have a natural conversation - what's on your mind?",
+                "Speaking confidently is a journey! Don't worry about perfection - let's just **practice communicating**. What would you like to talk about?",
+                "**Natural conversation** is the goal! I'm here to listen and help. What's something exciting that happened recently?",
             ]
 
-        # 语言学习
+        # 日常英语和实用场景
         elif any(
             word in message_lower
-            for word in ["语法", "单词", "grammar", "vocabulary", "英语", "english"]
+            for word in [
+                "daily",
+                "everyday",
+                "practical",
+                "real",
+                "situation",
+                "日常",
+                "实用",
+                "场景",
+            ]
         ):
             responses = [
-                "语言学习需要多练习。让我们从这个具体的例子开始，你能试着造个句子吗？",
-                "理解语法规则很重要，但更重要的是在实际中应用。你想先从哪个方面开始？",
-                "语言学习的秘诀是多使用。你能用刚学的这个知识点来回答我一个问题吗？",
+                "**Daily English** is so practical! Let's role-play a common situation. What scenario would be helpful for you?",
+                "Real-life English practice is the best! Which **everyday situation** would you like to practice - shopping, work, or social?",
+                "Practical English skills are essential! Let's practice a **common conversation** you might have. What interests you?",
+                "**Everyday scenarios** make great practice! Pick a situation and let's have a natural conversation about it.",
             ]
 
-        # 通用问候
+        # 学习目标和进展
         elif any(
-            word in message_lower for word in ["你好", "hello", "hi", "帮助", "help"]
+            word in message_lower
+            for word in [
+                "goal",
+                "improve",
+                "better",
+                "progress",
+                "learn",
+                "目标",
+                "提高",
+                "进步",
+                "学习",
+            ]
         ):
             responses = [
-                "你好！我是你的AI学习助手。我可以帮你学习各种学科，包括数学、科学、编程等。你今天想学什么？",
-                "很高兴见到你！我专门帮助学生学习和理解各种概念。你有什么学习目标吗？",
-                "欢迎！我是一位AI教师，擅长用苏格拉底式教学法帮助学生思考。你遇到什么学习挑战了吗？",
+                "Having **clear goals** is wonderful! What specific aspect of English speaking would you like to focus on today?",
+                "**Improvement** comes with consistent practice! What area do you feel most confident about, and what challenges you?",
+                "Your **learning journey** is unique! Tell me about your English goals - are you preparing for something specific?",
+                "**Progress** happens step by step! What would make you feel most accomplished in your English speaking today?",
             ]
 
-        # 默认响应
+        # 通用问候和开始对话
+        elif any(
+            word in message_lower
+            for word in [
+                "hello",
+                "hi",
+                "hey",
+                "good",
+                "morning",
+                "afternoon",
+                "你好",
+                "开始",
+            ]
+        ):
+            responses = [
+                "Hello! I'm your English speaking partner. I'm here to help you practice and improve through **natural conversation**. What would you like to talk about today?",
+                "Hi there! Welcome to our **speaking practice** session. I'm excited to help you build confidence in English. What's on your mind?",
+                "Good to see you! I'm your **AI conversation partner** designed to help you speak English more fluently. What topic interests you most?",
+                "Hey! Ready for some **English practice**? I'm here to chat, help with pronunciation, and make speaking fun. What shall we discuss?",
+            ]
+
+        # 默认响应 - 鼓励继续对话
         else:
             responses = [
-                "这是一个很有趣的问题！让我们一起探索一下。你能分享更多的背景信息吗？",
-                "我理解你的疑问。为了给你最好的帮助，你能告诉我你的学习目标是什么吗？",
-                "让我们一步步来分析这个问题。首先，你觉得关键点在哪里？",
-                "很好的问题！我建议我们从基础概念开始。你对相关的基本知识了解多少？",
+                "That's an interesting point! Can you **tell me more** about your thoughts on this? I'd love to keep our conversation going.",
+                "I appreciate you sharing that! **Speaking practice** is about expressing your ideas. What else would you like to discuss?",
+                "Great! You're doing well with **natural conversation**. Don't worry about being perfect - just keep talking. What's your opinion on this?",
+                "Thank you for sharing! **Fluency** comes from practice. Can you expand on that idea or share a related experience?",
+                "Wonderful! You're **communicating effectively**. Let's keep the conversation flowing - what would you like to explore next?",
             ]
 
         # 根据 temperature 选择响应的随机性
@@ -316,12 +382,13 @@ class AIService:
         if temperature > 0.7:
             # 高 temperature，更有创意的响应
             selected_response = random.choice(responses)
-            # 添加一些变化
+            # 添加口语学习相关的鼓励
             endings = [
-                " 我很期待听到你的想法！",
-                " 记住，学习是一个过程，我们慢慢来。",
-                " 你的好奇心很棒，这是学习的关键！",
-                " 让我们一起探索这个有趣的领域。",
+                " Remember, **making mistakes** is part of learning!",
+                " You're doing great - **keep practicing** and stay confident!",
+                " **Every conversation** helps you improve. Keep it up!",
+                " I'm here to support your **English journey** - you've got this!",
+                " **Speaking English** is about communication, not perfection!",
             ]
             selected_response += random.choice(endings)
         else:
@@ -383,27 +450,43 @@ class AIService:
             yield chunk
 
     def _get_tutor_system_prompt(self) -> str:
-        """Get the system prompt for AI tutoring"""
-        return """You are an expert AI tutor designed to help students learn effectively. Your role is to:
+        """Get the system prompt for AI English speaking tutor"""
+        return """You are a professional English speaking learning assistant with the following characteristics:
 
-1. **Understand the student's level**: Adapt your explanations to their knowledge level
-2. **Ask guiding questions**: Help students discover answers rather than giving them directly
-3. **Provide clear explanations**: Use simple language and examples when needed
-4. **Encourage critical thinking**: Challenge students to think deeper about concepts
-5. **Be patient and supportive**: Create a positive learning environment
-6. **Check understanding**: Regularly verify that students understand before moving forward
-7. **Provide practical examples**: Use real-world applications to illustrate concepts
+## Role Definition
+- Friendly, patient, and encouraging English learning partner
+- Equipped with long-term memory to remember user's learning journey and personal preferences
+- Goal-oriented, always focusing on user's learning progress and goal achievement
 
-Guidelines:
-- Always maintain a friendly, encouraging tone
-- Break down complex topics into manageable parts
-- Use the Socratic method when appropriate
-- Celebrate student progress and breakthroughs
-- Adapt to different learning styles
-- If a student seems frustrated, provide more guidance and support
-- End responses with a question or suggestion for the next step when appropriate
+## Core Capabilities
+1. **Personalized Teaching**: Adjust tone, difficulty, and topics based on user profile
+2. **Progress Tracking**: Continuously monitor learning goals and guide back to learning plan
+3. **Emotional Intelligence**: Recognize user's emotional state and adjust encouragement accordingly
+4. **Memory Coherence**: Reference historical conversation content to maintain long-term relationships
+5. **Speaking Focus**: Emphasize pronunciation, fluency, and natural conversation skills
 
-Remember: Your goal is to facilitate learning, not just provide answers."""
+## Teaching Approach
+- Use the Socratic method to guide thinking rather than direct answers
+- Encourage speaking practice through role-play and conversation
+- Provide pronunciation tips and fluency improvement suggestions
+- Create a supportive environment for making mistakes and learning
+- Focus on practical English for daily communication and specific goals
+
+## Output Format
+- Use natural conversational tone in English
+- Mark important vocabulary with **bold** formatting
+- Provide specific language learning suggestions
+- Reference relevant historical learning content when appropriate
+- Always encourage more speaking practice
+
+## Speaking Learning Focus
+- Daily conversation skills
+- Pronunciation improvement
+- Fluency building
+- Confidence development
+- Cultural context understanding
+
+Remember: Your goal is to help users become confident English speakers through engaging, personalized conversation practice."""
 
     async def create_tutor_session(
         self, user_id: str, subject: str, level: str = "intermediate"

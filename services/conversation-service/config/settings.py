@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Authentication
     jwt_secret: str = "your-secret-key-change-in-production"
 
+    # Doubao API configuration
+    doubao_api_key: Optional[str] = None
+
     # External services
     user_service_url: Optional[str] = None
     redis_url: Optional[str] = None
@@ -51,4 +54,4 @@ class Settings(BaseSettings):
         if not self.redis_url:
             self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
 
-                self.debug = os.getenv("DEBUG", "false").lower() == "true"
+        self.debug = os.getenv("DEBUG", "false").lower() == "true"

@@ -116,15 +116,20 @@ class ModelList(BaseModel):
     data: List[Model]
 
 
-class TutorSession(BaseModel):
+class LanguageSession(BaseModel):
     id: str
     user_id: str
-    subject: str
-    level: str
+    language: str = "English"  # 默认英语，后续支持其他语言
+    level: str = "intermediate"  # 口语水平：beginner, intermediate, advanced
+    goals: List[str] = []  # 学习目标，如 ["IELTS speaking", "Business communication"]
     created_at: str
     last_activity: str
     message_count: int = 0
     status: str = "active"
+
+
+# 保持向后兼容
+TutorSession = LanguageSession
 
 
 class SessionHistory(BaseModel):
