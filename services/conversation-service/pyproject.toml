@@ -1,116 +1,77 @@
-[project]
-name = "ai-tutor-conversation-service"
-version = "1.0.0"
-description = "OpenAI-compatible API service for AI tutoring conversations"
-authors = [
-    {name = "AI Tutor Team", email = "team@aitutor.com"}
-]
-readme = "README.md"
-requires-python = ">=3.11"
-keywords = ["ai", "tutoring", "openai", "fastapi", "education"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Education",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Framework :: FastAPI",
-    "Topic :: Education",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-]
-
-dependencies = [
-    "fastapi>=0.104.1",
-    "uvicorn[standard]>=0.24.0",
-    "pydantic>=2.5.0",
-    "python-dotenv>=1.0.0",
-    "httpx>=0.25.0",
-    "pydantic-settings>=2.1.0",
-    "python-multipart>=0.0.6",
-    "redis>=5.0.1",
-    "grpcio>=1.59.0",
-    "grpcio-tools>=1.59.0",
-    "protobuf>=4.25.1",
-    "PyJWT>=2.8.0",
-    "transformers>=4.35.0",
-    "torch>=2.1.0",
-    "accelerate>=0.24.0",
-    "sentencepiece>=0.1.99",
-    "requests>=2.32.4",
-    "logging>=0.4.9.6",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-mock>=3.11.0",
-    "black>=23.0.0",
-    "ruff>=0.1.0",
-    "mypy>=1.6.0",
-    "httpx>=0.25.0",
-]
-
-test = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.1.0",
-    "httpx>=0.25.0",
-]
-
-docs = [
-    "mkdocs>=1.5.0",
-    "mkdocs-material>=9.4.0",
-]
-
-[project.urls]
-Homepage = "https://github.com/your-org/ai-tutor-monorepo"
-Documentation = "https://your-docs.com"
-Repository = "https://github.com/your-org/ai-tutor-monorepo"
-Issues = "https://github.com/your-org/ai-tutor-monorepo/issues"
-
-[project.scripts]
-conversation-service = "main:main"
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src"]
-
-# Ruff configuration
-[tool.ruff]
-target-version = "py311"
-line-length = 88
-select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "B",  # flake8-bugbear
-    "C4", # flake8-comprehensions
-    "UP", # pyupgrade
+[project]
+name = "conversation-service"
+version = "2.0.0"
+description = "AI English Speaking Learning Service - Simplified"
+authors = [
+    {name = "AI Tutor Team", email = "team@ai-tutor.com"},
 ]
-ignore = [
-    "E501",  # line too long, handled by black
-    "B008",  # do not perform function calls in argument defaults
-    "C901",  # too complex
+dependencies = [
+    "fastapi>=0.104.1",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.5.0",
+    "httpx>=0.25.2",
+    "python-jose[cryptography]>=3.3.0",
+    "python-multipart>=0.0.6",
+    "aiofiles>=23.2.1",
+]
+requires-python = ">=3.9"
+readme = "README.md"
+license = {text = "MIT"}
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "httpx>=0.25.2",
+    "black>=23.11.0",
+    "isort>=5.12.0",
+    "flake8>=6.1.0",
+    "mypy>=1.7.1",
 ]
 
-[tool.ruff.per-file-ignores]
-"__init__.py" = ["F401"]
+[project.urls]
+Homepage = "https://github.com/ai-tutor/conversation-service"
+Repository = "https://github.com/ai-tutor/conversation-service.git"
+Documentation = "https://ai-tutor.github.io/conversation-service"
 
-# Black configuration
+[project.scripts]
+conversation-service = "app:app"
+
+# ========================================
+# Tool Configuration
+# ========================================
+
 [tool.black]
-target-version = ['py311']
 line-length = 88
-skip-string-normalization = true
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
 
-# MyPy configuration
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["app"]
+
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -123,42 +84,59 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+disallow_any_generics = false
 
-# Pytest configuration
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = [
-    "-ra",
-    "--strict-markers",
-    "--strict-config",
-    "--cov=src",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-    "--cov-report=xml",
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = [
+    "tests",
 ]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
+asyncio_mode = "auto"
+
+# ========================================
+# Development Scripts
+# ========================================
+
+[tool.hatch.envs.default]
+dependencies = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "httpx>=0.25.2",
+    "black>=23.11.0",
+    "isort>=5.12.0",
+    "flake8>=6.1.0",
+    "mypy>=1.7.1",
 ]
 
-# Coverage configuration
-[tool.coverage.run]
-source = ["src"]
-branch = true
+[tool.hatch.envs.default.scripts]
+# Development server
+dev = "uvicorn app:app --reload --host 0.0.0.0 --port 8000"
+# Production server  
+prod = "uvicorn app:app --host 0.0.0.0 --port 8000"
+# Testing
+test = "pytest {args:tests}"
+test-cov = "pytest --cov=app {args:tests}"
+# Code quality
+lint = [
+    "black --check --diff {args:.}",
+    "isort --check-only --diff {args:.}",
+    "flake8 {args:.}",
+]
+format = [
+    "black {args:.}",
+    "isort {args:.}",
+]
+typecheck = "mypy {args:app.py}"
 
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if self.debug:",
-    "if settings.DEBUG",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if 0:",
-    "if __name__ == .__main__.:",
-    "class .*\\bProtocol\\):",
-    "@(abc\\.)?abstractmethod",
-] 
+[tool.hatch.envs.test]
+dependencies = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.25.2",
+]
+
+[tool.hatch.envs.test.scripts]
+test = "pytest {args:tests}"
+test-cov = "pytest --cov=app --cov-report=term-missing {args:tests}" 

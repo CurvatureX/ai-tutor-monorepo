@@ -1,333 +1,321 @@
-# AI Tutor Conversation Service
+# AI English Speaking Learning Service (Simplified)
 
-🤖 **Unified API service** that provides AI tutoring conversations supporting both **OpenAI-compatible API** and **Doubao API**. Built with FastAPI and managed by uv.
+🗣️ **A consolidated AI-powered English conversation partner for language learning**
 
-## 🎯 核心特性
+This is a **simplified, single-file** FastAPI service that provides intelligent English conversation practice. All functionality has been consolidated into one main file for easier development and maintenance.
 
-- **🔄 OpenAI API 完全兼容**: 现有使用 OpenAI SDK 的代码可以直接切换到我们的服务
-- **🏠 本地模型支持**: 不依赖外部 API，可以使用自己的 AI 模型
-- **🎯 Doubao API 集成**: 支持豆包 API 进行文本和多模态对话
-- **🎓 智能教学响应**: 专门为教育场景优化的 AI 响应
-- **⚡ uv 管理**: 使用最现代的 Python 包管理工具
+## ✨ Features
 
-## ⚡ Quick Start with uv
+- 🤖 **Multiple AI model support** (Doubao, DeepSeek, Gemini + local models)
+- 🔄 **Streaming responses** with Server-Sent Events
+- 🔐 **Simple JWT authentication**
+- 🌍 **CORS enabled** for web applications
+- 📱 **Mobile-friendly** JSON responses
+- 🎯 **OpenAI-compatible API** endpoints
+- 📝 **Intelligent tutoring responses** with contextual guidance
 
-### 1. Install uv (if not already installed)
+## 🏗️ Simplified Architecture
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+conversation-service/
+├── app.py                    # 🎯 MAIN FILE - Everything in one place!
+├── prompt.py                 # 🎭 PROMPT SYSTEM - Dynamic prompt generation
+├── pyproject.toml            # Dependencies and configuration
+├── README.md                 # This file
+├── Dockerfile                # Container configuration
+├── test_simple.py            # Simple API testing
+├── example_prompt_usage.py   # Prompt system examples
+└── tests/                    # Test files (optional)
 ```
 
-### 2. Setup Environment
+**That's it!** No complex directory structures, no scattered files. Core functionality in `app.py`, intelligent prompts in `prompt.py`.
 
-```bash
-# Clone and navigate to the service directory
-cd services/conversation-service
+## 🎭 Dynamic Prompt System
 
-# Copy environment template
-cp .env.example .env
+The service now includes a sophisticated prompt management system (`prompt.py`) that creates context-aware, personalized prompts for different learning scenarios.
 
-# Edit .env and set your API keys:
-# DOUBAO_API_KEY=your_doubao_api_key_here
-# JWT_SECRET=your_jwt_secret_here
-```
+### Key Features
 
-### 3. Install and Run
+- **🎯 Context-Aware**: Different prompts for grammar, vocabulary, pronunciation, business English, etc.
+- **📊 Level-Adaptive**: Prompts adjust based on learner level (beginner, intermediate, advanced)
+- **🎪 Topic-Focused**: Specialized prompts for specific topics (travel, food, work, etc.)
+- **👤 Personalized**: Incorporates user goals and interests
+- **🎭 Roleplay Support**: Interactive scenario-based learning
+- **📈 Assessment-Ready**: Prompts for skill evaluation
 
-```bash
-# Install all dependencies (including dev dependencies)
-uv sync
-
-# Run the service
-uv run python main.py
-
-# Or use the development script
-uv run python scripts/dev.py run
-```
-
-### 4. Test the Service
-
-```bash
-# Visit API documentation
-open http://localhost:8000/docs
-
-# Test health endpoint
-curl http://localhost:8000/health
-
-# Test OpenAI compatibility
-uv run python test_openai_client.py
-
-# Test Doubao API
-uv run python test_api.py
-```
-
-## 🔌 API 兼容性
-
-### ✅ OpenAI-Compatible API
-
-现有的 OpenAI 代码可以直接切换到我们的服务：
+### Example Usage
 
 ```python
-import openai
+from prompt import create_system_prompt, ConversationContext, LearningLevel
 
-# 只需要改变这两行配置
-openai.api_base = "http://localhost:8000/v1"  # 指向我们的服务
-openai.api_key = "dev-token"                  # 使用我们的认证
-
-# 其余代码完全不变！
-response = openai.ChatCompletion.create(
-    model="gpt-4-tutor",  # 或者 "doubao-seed-1-6-250615"
-    messages=[
-        {"role": "user", "content": "解释机器学习的基本概念"}
-    ]
+# Create a grammar-focused prompt for beginners
+grammar_prompt = create_system_prompt(
+    context=ConversationContext.GRAMMAR,
+    level=LearningLevel.BEGINNER,
+    topic="past tense",
+    learning_goals=["Master simple past tense", "Practice irregular verbs"],
+    user_interests=["movies", "travel"]
 )
 
-print(response.choices[0].message.content)
+# Generate conversation starters
+starter = create_conversation_starter(
+    ConversationContext.VOCABULARY,
+    LearningLevel.INTERMEDIATE,
+    "technology"
+)
 ```
 
-### 🎯 Doubao API Endpoints
+### Available Contexts
+
+- `GENERAL` - General conversation practice
+- `GRAMMAR` - Grammar-focused learning
+- `VOCABULARY` - Vocabulary building
+- `PRONUNCIATION` - Pronunciation improvement
+- `CONVERSATION_PRACTICE` - Natural conversation flow
+- `BUSINESS_ENGLISH` - Professional communication
+- `ACADEMIC_ENGLISH` - Scholarly language skills
+- `CASUAL_CHAT` - Informal conversation
+
+### Enhanced API Endpoints
+
+| Endpoint                   | Method | Description                          |
+| -------------------------- | ------ | ------------------------------------ |
+| `/health`                  | GET    | Health check                         |
+| `/v1/models`               | GET    | List available models                |
+| `/v1/chat/completions`     | POST   | OpenAI-compatible chat completions   |
+| `/v1/language/session`     | POST   | Create enhanced learning session     |
+| `/v1/conversation/starter` | GET    | Get contextual conversation starters |
+| `/conversation`            | POST   | Simple conversation endpoint         |
+
+### Enhanced Session Creation
 
 ```bash
-# Text conversation
+curl -X POST "http://localhost:8000/v1/language/session" \
+  -H "Authorization: Bearer demo-token" \
+  -d "language=English&level=intermediate&context=business_english&topic=presentations&goals=improve presentation skills,learn business vocabulary&interests=technology,entrepreneurship"
+```
+
+### Conversation Starters
+
+```bash
+curl "http://localhost:8000/v1/conversation/starter?context=vocabulary&level=intermediate&topic=food" \
+  -H "Authorization: Bearer demo-token"
+```
+
+## 🚀 Quick Start
+
+### 1. Install Dependencies
+
+```bash
+# Using uv (recommended)
+uv install
+
+# Or using pip
+pip install -e .
+```
+
+### 2. Set Environment Variables (Optional)
+
+```bash
+# External API keys (all optional - service works without them)
+export DOUBAO_API_KEY="your-doubao-key"
+export DEEPSEEK_API_KEY="your-deepseek-key"
+export GEMINI_API_KEY="your-gemini-key"
+
+# Service configuration
+export HOST="0.0.0.0"
+export PORT="8000"
+export DEBUG="true"
+```
+
+### 3. Run the Service
+
+```bash
+# Development mode (with auto-reload)
+python app.py
+
+# Or using uvicorn directly
+uvicorn app:app --reload --host 0.0.0.0 --port 8000
+
+# Or using hatch scripts
+hatch run dev
+```
+
+The service will start at `http://localhost:8000`
+
+## 📚 API Documentation
+
+Visit `http://localhost:8000/docs` for interactive Swagger documentation.
+
+### Available Endpoints
+
+| Endpoint                   | Method | Description                          |
+| -------------------------- | ------ | ------------------------------------ |
+| `/health`                  | GET    | Health check                         |
+| `/v1/models`               | GET    | List available models                |
+| `/v1/chat/completions`     | POST   | OpenAI-compatible chat completions   |
+| `/v1/language/session`     | POST   | Create enhanced learning session     |
+| `/v1/conversation/starter` | GET    | Get contextual conversation starters |
+| `/conversation`            | POST   | Simple conversation endpoint         |
+
+### Example Usage
+
+#### Simple Conversation
+
+```bash
 curl -X POST "http://localhost:8000/conversation" \
+  -H "Authorization: Bearer demo-token" \
   -H "Content-Type: application/json" \
-  -d '{
-    "message": "你好，我想学习编程",
-    "user_id": "user123",
-    "model": "doubao-seed-1-6-250615"
-  }'
-
-# Multimodal conversation
-curl -X POST "http://localhost:8000/conversation/multimodal" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "text": "这张图片讲了什么？",
-    "image_url": "https://example.com/image.jpg",
-    "user_id": "user123",
-    "model": "doubao-seed-1-6-250615"
-  }'
+  -d '{"message": "Hello! I want to practice English."}'
 ```
 
-## 📊 API 端点总览
-
-### OpenAI-Compatible Endpoints
-
-| 端点                      | 方法 | 说明                 | 认证 |
-| ------------------------- | ---- | -------------------- | ---- |
-| `/v1/models`              | GET  | 列出可用模型         | JWT  |
-| `/v1/chat/completions`    | POST | 聊天完成（支持流式） | JWT  |
-| `/v1/tutor/session`       | POST | 创建教学会话         | JWT  |
-| `/v1/tutor/sessions`      | GET  | 获取用户会话列表     | JWT  |
-| `/v1/tutor/sessions/{id}` | GET  | 获取会话历史         | JWT  |
-
-### Doubao API Endpoints
-
-| 端点                       | 方法 | 说明                 | 认证 |
-| -------------------------- | ---- | -------------------- | ---- |
-| `/conversation`            | POST | 文本对话             | None |
-| `/conversation/multimodal` | POST | 多模态对话           | None |
-| `/test/doubao`             | POST | 测试 Doubao API 连接 | None |
-
-### 通用端点
-
-| 端点      | 方法 | 说明     |
-| --------- | ---- | -------- |
-| `/`       | GET  | 服务信息 |
-| `/health` | GET  | 健康检查 |
-| `/docs`   | GET  | API 文档 |
-
-## 🤖 支持的模型
-
-| 模型 ID                  | 提供商 | 功能     | API    |
-| ------------------------ | ------ | -------- | ------ |
-| `gpt-4-tutor`            | Local  | 智能教学 | OpenAI |
-| `gpt-3.5-turbo-tutor`    | Local  | 智能教学 | OpenAI |
-| `local-tutor`            | Local  | 智能教学 | OpenAI |
-| `doubao-seed-1-6-250615` | Doubao | 通用对话 | Both   |
-
-## 🛠️ Development Commands
+#### OpenAI-Compatible Chat
 
 ```bash
-# Install dependencies
-uv sync                              # Production only
-uv run python scripts/dev.py dev    # All dependencies
-
-# Run service
-uv run python scripts/dev.py run
-
-# Code quality
-uv run python scripts/dev.py lint   # Check code
-uv run python scripts/dev.py format # Format code
-
-# Testing
-uv run python scripts/dev.py test   # Run tests
-uv run python test_openai_client.py # Test OpenAI compatibility
-uv run python test_api.py           # Test Doubao API
-
-# Utilities
-uv run python scripts/dev.py clean  # Clean cache
+curl -X POST "http://localhost:8000/v1/chat/completions" \
+  -H "Authorization: Bearer demo-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4-tutor",
+    "messages": [
+      {"role": "user", "content": "Help me practice English conversation"}
+    ],
+    "stream": false
+  }'
 ```
 
-## 🔧 配置选项
-
-### Environment Variables
-
-| Variable           | Description           | Default                    |
-| ------------------ | --------------------- | -------------------------- |
-| `PORT`             | Server port           | `8000`                     |
-| `DEBUG`            | Debug mode            | `false`                    |
-| `USE_LOCAL_MODEL`  | Enable local AI model | `false`                    |
-| `MODEL_PATH`       | Path to local model   | `None`                     |
-| `MODEL_NAME`       | Model identifier      | `local-tutor`              |
-| `DOUBAO_API_KEY`   | Doubao API key        | Required                   |
-| `JWT_SECRET`       | JWT signing secret    | `your-secret-key`          |
-| `USER_SERVICE_URL` | User service URL      | `http://user-service:8001` |
-| `REDIS_URL`        | Redis connection URL  | `redis://localhost:6379`   |
-
-### 本地模型集成
-
-```python
-# 在 ai_service.py 中启用真实模型
-async def _load_local_model(self):
-    from transformers import AutoTokenizer, AutoModelForCausalLM
-
-    self.tokenizer = AutoTokenizer.from_pretrained("your-model-name")
-    self.local_model = AutoModelForCausalLM.from_pretrained("your-model-name")
-```
-
-## 🚀 使用示例
-
-### 1. OpenAI 兼容调用
-
-```python
-import httpx
-
-async def chat_with_openai_format():
-    headers = {"Authorization": "Bearer dev-token", "Content-Type": "application/json"}
-
-    payload = {
-        "model": "gpt-4-tutor",
-        "messages": [
-            {"role": "user", "content": "什么是算法复杂度？"}
-        ],
-        "temperature": 0.7
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "http://localhost:8000/v1/chat/completions",
-            headers=headers,
-            json=payload
-        )
-        result = response.json()
-        print(result["choices"][0]["message"]["content"])
-```
-
-### 2. Doubao API 调用
-
-```python
-import httpx
-
-async def chat_with_doubao():
-    payload = {
-        "message": "解释什么是深度学习",
-        "user_id": "user123",
-        "model": "doubao-seed-1-6-250615"
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "http://localhost:8000/conversation",
-            json=payload
-        )
-        result = response.json()
-        print(result["response"])
-```
-
-### 3. 多模态对话
-
-```python
-import httpx
-
-async def multimodal_chat():
-    payload = {
-        "text": "这张图片展示了什么内容？",
-        "image_url": "https://example.com/image.jpg",
-        "user_id": "user123",
-        "model": "doubao-seed-1-6-250615"
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "http://localhost:8000/conversation/multimodal",
-            json=payload
-        )
-        result = response.json()
-        print(result["response"])
-```
-
-## 🐳 Docker 部署
+#### Streaming Response
 
 ```bash
-# 构建镜像
-docker build -t ai-tutor-service .
+curl -X POST "http://localhost:8000/v1/chat/completions" \
+  -H "Authorization: Bearer demo-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4-tutor",
+    "messages": [
+      {"role": "user", "content": "Tell me about travel"}
+    ],
+    "stream": true
+  }'
+```
 
-# 运行容器
+## 🔧 Configuration
+
+All configuration is done via environment variables:
+
+| Variable           | Default           | Description                 |
+| ------------------ | ----------------- | --------------------------- |
+| `HOST`             | `0.0.0.0`         | Server host                 |
+| `PORT`             | `8000`            | Server port                 |
+| `DEBUG`            | `false`           | Enable debug mode           |
+| `TEMPERATURE`      | `0.7`             | AI response temperature     |
+| `MAX_TOKENS`       | `2000`            | Maximum response tokens     |
+| `DOUBAO_API_KEY`   | -                 | Doubao API key (optional)   |
+| `DEEPSEEK_API_KEY` | -                 | DeepSeek API key (optional) |
+| `GEMINI_API_KEY`   | -                 | Gemini API key (optional)   |
+| `JWT_SECRET`       | `your-secret-key` | JWT secret for auth         |
+
+## 🤖 Available Models
+
+The service supports multiple AI models:
+
+- **`gpt-4-tutor`** - Local English tutoring model (default)
+- **`local-tutor`** - Alternative local model
+- **`doubao-seed-1-6-250615`** - Doubao API (requires API key)
+- **`deepseek-chat`** - DeepSeek API (requires API key)
+- **`gemini-2.5-flash`** - Gemini API (requires API key)
+
+## 🧪 Development
+
+### Code Quality Tools
+
+```bash
+# Format code
+hatch run format
+
+# Lint code
+hatch run lint
+
+# Type checking
+hatch run typecheck
+
+# Run tests
+hatch run test
+
+# Run tests with coverage
+hatch run test-cov
+```
+
+### Adding New Features
+
+Since everything is in one file (`app.py`), adding new features is straightforward:
+
+1. **Add new models** - Update the `Role` enum and `ChatMessage` class
+2. **Add new endpoints** - Add functions with `@app.get()` or `@app.post()` decorators
+3. **Add new business logic** - Extend the `ConversationService` class
+4. **Add new configuration** - Update the `Config` class
+
+## 🐳 Docker
+
+```bash
+# Build image
+docker build -t conversation-service .
+
+# Run container
+docker run -p 8000:8000 conversation-service
+
+# With environment variables
 docker run -p 8000:8000 \
-  -e USE_LOCAL_MODEL=false \
-  -e DOUBAO_API_KEY=your_api_key \
-  -e DEBUG=false \
-  ai-tutor-service
+  -e DOUBAO_API_KEY="your-key" \
+  -e DEBUG="true" \
+  conversation-service
 ```
 
-## 📈 性能和扩展
+## 🔐 Authentication
 
-- **⚡ 高性能**: FastAPI + async/await
-- **🔄 可扩展**: 支持负载均衡和水平扩展
-- **📊 监控**: 内置健康检查和指标
-- **🔒 安全**: JWT 认证和 CORS 配置
-- **🎛️ 灵活**: 支持多种 AI 后端
+The service uses simple JWT authentication:
 
-## 🆚 API 对比
+- For development: Any bearer token works (returns demo user)
+- For production: Implement proper JWT validation in the `get_current_user()` function
 
-| 特性       | OpenAI API    | Doubao API    | 我们的服务          |
-| ---------- | ------------- | ------------- | ------------------- |
-| 格式标准   | ✅ OpenAI     | ✅ Doubao     | ✅ 两者都支持       |
-| 费用       | 💰 按使用付费 | 💰 按使用付费 | 🆓 本地模型免费     |
-| 数据隐私   | ⚠️ 发送到外部 | ⚠️ 发送到外部 | 🔒 本地模型完全私有 |
-| 自定义模型 | ❌ 不支持     | ❌ 不支持     | ✅ 完全支持         |
-| 教学优化   | ❌ 通用模型   | ❌ 通用模型   | 🎓 专门优化         |
-| 多模态     | ✅ 支持       | ✅ 支持       | ✅ 支持             |
+Example authorization header:
 
-## 🔄 迁移指南
+```
+Authorization: Bearer demo-token
+```
 
-### 从 OpenAI API 迁移
+## 🎯 Why Simplified?
 
-1. **无需修改代码**: 只需更改 `api_base` 和 `api_key`
-2. **模型选择**: 可选择本地模型或 Doubao 模型
-3. **额外功能**: 使用教学专用端点
+This simplified architecture offers several benefits:
 
-### 从其他服务迁移
+✅ **Easier to understand** - Everything in one file  
+✅ **Faster development** - No complex imports or module paths  
+✅ **Easier debugging** - All code in one place  
+✅ **Simpler deployment** - Single file to manage  
+✅ **Better for learning** - Clear code structure  
+✅ **Reduced complexity** - No over-engineering
 
-1. **使用 Doubao API**: 直接调用 `/conversation` 端点
-2. **多模态支持**: 使用 `/conversation/multimodal` 端点
-3. **灵活集成**: 选择最适合的 API 格式
+## 📝 Migration from Complex Structure
 
-## 🤝 贡献
+If you're migrating from the old complex structure:
 
-1. Fork 项目
-2. 创建功能分支: `git checkout -b feature/amazing-feature`
-3. 提交更改: `git commit -m 'Add amazing feature'`
-4. 推送分支: `git push origin feature/amazing-feature`
-5. 创建 Pull Request
+- **Old**: `app/api/v1/endpoints/chat.py` → **New**: `app.py` (chat endpoints section)
+- **Old**: `services/ai_service.py` → **New**: `app.py` (ConversationService class)
+- **Old**: `models/openai_models.py` → **New**: `app.py` (models section)
+- **Old**: `config/settings.py` → **New**: `app.py` (Config class)
+- **Old**: `main.py` → **New**: `app.py` (application setup section)
 
-## 📄 许可证
+## 🤝 Contributing
 
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。
+1. Edit `app.py` directly
+2. Run tests: `hatch run test`
+3. Format code: `hatch run format`
+4. Submit PR
 
-## 🙏 致谢
+## 📄 License
 
-- FastAPI 团队提供优秀的 Web 框架
-- Hugging Face 提供 transformers 库
-- OpenAI 提供 API 标准参考
-- 豆包（Doubao）提供 AI 服务支持
+MIT License - see LICENSE file for details.
+
+---
+
+🎉 **Happy English learning!** This simplified service makes it easy to build AI-powered conversation practice applications.
