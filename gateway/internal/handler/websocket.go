@@ -157,6 +157,8 @@ func (h *WebSocketHandler) processGRPCResponse(sessionID string, response *speec
 		h.handleLLMResult(sessionID, result.LlmResult)
 	case *speechv1.VoiceResponse_TtsResult:
 		h.handleTTSResult(sessionID, result.TtsResult)
+	case *speechv1.VoiceResponse_IseResult:
+		h.handleISEResult(sessionID, result.IseResult)
 	case *speechv1.VoiceResponse_Error:
 		h.handleGRPCError(sessionID, result.Error)
 	case *speechv1.VoiceResponse_StatusResult:
@@ -209,6 +211,65 @@ func (h *WebSocketHandler) handleTTSResult(sessionID string, result *speechv1.TT
 			"format":      result.Format.Codec,
 			"duration_ms": result.DurationMs,
 			"is_final":    result.IsFinal,
+		},
+		Session: sessionID,
+	}
+	h.manager.SendMessage(sessionID, message)
+}
+
+// handleISEResult handles ISE evaluation results from gRPC service
+func (h *WebSocketHandler) handleISEResult(sessionID string, result *speechv1.ISEResult) {
+	// Convert word scores
+	wordScores := make([]map[string]interface{}, len(result.WordScores))
+	for i, ws := range result.WordScores {
+		wordScores[i] = map[string]interface{}{
+			"word":       ws.Word,
+			"score":      ws.Score,
+			"start_time": ws.StartTime,
+			"end_time":   ws.EndTime,
+			"is_correct": ws.IsCorrect,
+			"confidence": ws.Confidence,
+		}
+	}
+
+	// Convert phone scores
+	phoneScores := make([]map[string]interface{}, len(result.PhoneScores))
+	for i, ps := range result.PhoneScores {
+		phoneScores[i] = map[string]interface{}{
+			"phone":      ps.Phone,
+			"score":      ps.Score,
+			"start_time": ps.StartTime,
+			"end_time":   ps.EndTime,
+			"is_correct": ps.IsCorrect,
+		}
+	}
+
+	// Convert sentence scores
+	sentenceScores := make([]map[string]interface{}, len(result.SentenceScores))
+	for i, ss := range result.SentenceScores {
+		sentenceScores[i] = map[string]interface{}{
+			"sentence":       ss.Sentence,
+			"score":          ss.Score,
+			"accuracy_score": ss.AccuracyScore,
+			"fluency_score":  ss.FluencyScore,
+			"total_words":    ss.TotalWords,
+			"correct_words":  ss.CorrectWords,
+		}
+	}
+
+	message := &model.WebSocketMessage{
+		Type: model.MessageTypeText,
+		Data: map[string]interface{}{
+			"type":               "ise_result",
+			"overall_score":      result.OverallScore,
+			"accuracy_score":     result.AccuracyScore,
+			"fluency_score":      result.FluencyScore,
+			"completeness_score": result.CompletenessScore,
+			"word_scores":        wordScores,
+			"phone_scores":       phoneScores,
+			"sentence_scores":    sentenceScores,
+			"is_final":           result.IsFinal,
+			"reference_text":     result.ReferenceText,
 		},
 		Session: sessionID,
 	}
@@ -297,7 +358,7 @@ func (h *WebSocketHandler) handleUserTextMessage(sessionID string, message *mode
 	}
 
 	h.logger.Infof("Received text from user in session %s: %s", sessionID, userText)
-	
+
 	// Forward text to gRPC service as control message
 	h.forwardControlToGRPC(sessionID, "text_input", map[string]interface{}{
 		"text": userText,

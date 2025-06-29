@@ -73,8 +73,9 @@ message VoiceResponse {
     ASRResult asr_result = 4;
     LLMResult llm_result = 5;
     TTSResult tts_result = 6;
-    ErrorResult error = 7;
-    StatusResult status_result = 8;
+    ISEResult ise_result = 7;
+    ErrorResult error = 8;
+    StatusResult status_result = 9;
   }
 }
 
@@ -120,6 +121,48 @@ message TTSResult {
   int64 duration_ms = 3;
   bool is_final = 4;
   int32 chunk_index = 5;
+}
+
+// ISEResult contains speech evaluation results
+message ISEResult {
+  float overall_score = 1;      // Overall pronunciation score (0-100)
+  float accuracy_score = 2;     // Accuracy score (0-100)
+  float fluency_score = 3;      // Fluency score (0-100)
+  float completeness_score = 4; // Completeness score (0-100)
+  repeated WordScore word_scores = 5;       // Word-level scores
+  repeated PhoneScore phone_scores = 6;     // Phoneme-level scores
+  repeated SentenceScore sentence_scores = 7; // Sentence-level scores
+  bool is_final = 8;
+  string reference_text = 9;    // Original text that was evaluated against
+}
+
+// WordScore represents word-level pronunciation evaluation
+message WordScore {
+  string word = 1;
+  float score = 2;
+  int64 start_time = 3;  // milliseconds
+  int64 end_time = 4;    // milliseconds
+  bool is_correct = 5;
+  float confidence = 6;
+}
+
+// PhoneScore represents phoneme-level pronunciation evaluation
+message PhoneScore {
+  string phone = 1;      // Phoneme symbol (e.g., /ə/, /t/, /h/)
+  float score = 2;
+  int64 start_time = 3;  // milliseconds
+  int64 end_time = 4;    // milliseconds
+  bool is_correct = 5;
+}
+
+// SentenceScore represents sentence-level pronunciation evaluation
+message SentenceScore {
+  string sentence = 1;
+  float score = 2;
+  float accuracy_score = 3;
+  float fluency_score = 4;
+  int32 total_words = 5;
+  int32 correct_words = 6;
 }
 
 // ErrorResult contains error information

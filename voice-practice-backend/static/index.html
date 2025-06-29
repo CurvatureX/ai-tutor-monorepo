@@ -165,6 +165,137 @@
             border-radius: 8px;
             margin: 10px 0;
         }
+        
+        .ise-result {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            color: white;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        }
+        
+        .ise-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 15px;
+        }
+        
+        .ise-overall-score {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .ise-scores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .ise-score-item {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .ise-score-label {
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+        
+        .ise-score-value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+        
+        .ise-progress-bar {
+            background: rgba(255, 255, 255, 0.2);
+            height: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .ise-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            border-radius: 2px;
+            transition: width 0.8s ease;
+        }
+        
+        .ise-words {
+            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .ise-words-title {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .ise-word-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: center;
+        }
+        
+        .ise-word-tag {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: transform 0.2s ease;
+        }
+        
+        .ise-word-tag:hover {
+            transform: scale(1.05);
+        }
+        
+        .ise-word-correct {
+            background: rgba(72, 219, 251, 0.3);
+            color: #48dbfb;
+            border: 1px solid rgba(72, 219, 251, 0.5);
+        }
+        
+        .ise-word-incorrect {
+            background: rgba(255, 107, 107, 0.3);
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 107, 107, 0.5);
+        }
+        
+        .ise-reference {
+            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .ise-reference-title {
+            margin-bottom: 8px;
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+        
+        .ise-reference-text {
+            font-size: 1.1em;
+            font-style: italic;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -374,6 +505,9 @@
                                 case 'tts_ready':
                                     console.log('TTS audio ready, format:', message.data.format);
                                     break;
+                                case 'ise_result':
+                                    this.displayISEResult(message.data);
+                                    break;
                             }
                         } else {
                             this.addMessage(message.data, 'ai');
@@ -534,6 +668,103 @@
                     };
                     this.ws.send(JSON.stringify(message));
                 }
+            }
+
+            displayISEResult(iseData) {
+                const messageEl = document.createElement('div');
+                messageEl.className = 'message ai';
+                
+                // Get score color based on overall score
+                const getScoreColor = (score) => {
+                    if (score >= 90) return '#48dbfb';
+                    if (score >= 80) return '#feca57';
+                    if (score >= 70) return '#ff9ff3';
+                    return '#ff6b6b';
+                };
+                
+                const overallScore = Math.round(iseData.overall_score || 0);
+                const accuracyScore = Math.round(iseData.accuracy_score || 0);
+                const fluencyScore = Math.round(iseData.fluency_score || 0);
+                const completenessScore = Math.round(iseData.completeness_score || 0);
+                
+                let iseHTML = `
+                    <div class="ise-result">
+                        <div class="ise-header">
+                            <div>🎯 语音评测结果</div>
+                            <div class="ise-overall-score" style="color: ${getScoreColor(overallScore)}">${overallScore}</div>
+                            <div>总体得分</div>
+                        </div>
+                        
+                        <div class="ise-scores-grid">
+                            <div class="ise-score-item">
+                                <div class="ise-score-label">准确性</div>
+                                <div class="ise-score-value" style="color: ${getScoreColor(accuracyScore)}">${accuracyScore}</div>
+                                <div class="ise-progress-bar">
+                                    <div class="ise-progress-fill" style="width: ${accuracyScore}%"></div>
+                                </div>
+                            </div>
+                            <div class="ise-score-item">
+                                <div class="ise-score-label">流利度</div>
+                                <div class="ise-score-value" style="color: ${getScoreColor(fluencyScore)}">${fluencyScore}</div>
+                                <div class="ise-progress-bar">
+                                    <div class="ise-progress-fill" style="width: ${fluencyScore}%"></div>
+                                </div>
+                            </div>
+                            <div class="ise-score-item">
+                                <div class="ise-score-label">完整度</div>
+                                <div class="ise-score-value" style="color: ${getScoreColor(completenessScore)}">${completenessScore}</div>
+                                <div class="ise-progress-bar">
+                                    <div class="ise-progress-fill" style="width: ${completenessScore}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                `;
+                
+                // Add reference text if available
+                if (iseData.reference_text) {
+                    iseHTML += `
+                        <div class="ise-reference">
+                            <div class="ise-reference-title">参考文本</div>
+                            <div class="ise-reference-text">"${iseData.reference_text}"</div>
+                        </div>
+                    `;
+                }
+                
+                // Add word-level scores if available
+                if (iseData.word_scores && iseData.word_scores.length > 0) {
+                    iseHTML += `
+                        <div class="ise-words">
+                            <div class="ise-words-title">单词评分详情</div>
+                            <div class="ise-word-tags">
+                    `;
+                    
+                    iseData.word_scores.forEach(word => {
+                        const wordClass = word.is_correct ? 'ise-word-correct' : 'ise-word-incorrect';
+                        const wordScore = Math.round(word.score || 0);
+                        iseHTML += `
+                            <div class="${wordClass} ise-word-tag" title="得分: ${wordScore}, 置信度: ${Math.round(word.confidence * 100)}%">
+                                ${word.word} (${wordScore})
+                            </div>
+                        `;
+                    });
+                    
+                    iseHTML += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                iseHTML += `
+                    </div>
+                    <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+                `;
+                
+                messageEl.innerHTML = iseHTML;
+                this.chatEl.appendChild(messageEl);
+                this.chatEl.scrollTop = this.chatEl.scrollHeight;
+                
+                // Also add a simple text summary
+                this.addMessage(`语音评测完成 - 总分: ${overallScore}, 准确性: ${accuracyScore}, 流利度: ${fluencyScore}, 完整度: ${completenessScore}`, 'system');
             }
         }
 

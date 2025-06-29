@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/ai-tutor-monorepo/services/speech-service/internal/model"
 	"github.com/ai-tutor-monorepo/services/speech-service/internal/service"
 	speechv1 "github.com/ai-tutor-monorepo/services/speech-service/pkg/proto/speech"
 )
@@ -18,13 +20,14 @@ import (
 // SpeechHandler implements the gRPC SpeechService
 type SpeechHandler struct {
 	speechv1.UnimplementedSpeechServiceServer
-	
+
 	audioService *service.AudioService
 	asrService   *service.ASRService
 	llmService   *service.LLMService
 	ttsService   *service.TTSService
+	iseService   *service.ISEService
 	logger       *logrus.Logger
-	
+
 	// Track active sessions
 	sessions map[string]*VoiceSession
 	mu       sync.RWMutex
@@ -32,13 +35,13 @@ type SpeechHandler struct {
 
 // VoiceSession represents an active voice conversation session
 type VoiceSession struct {
-	ID            string
-	IsRecording   bool
-	StartTime     time.Time
-	LastActivity  time.Time
-	AudioBuffer   []byte
-	Context       string
-	Stream        speechv1.SpeechService_ProcessVoiceConversationServer
+	ID           string
+	IsRecording  bool
+	StartTime    time.Time
+	LastActivity time.Time
+	AudioBuffer  []byte
+	Context      string
+	Stream       speechv1.SpeechService_ProcessVoiceConversationServer
 }
 
 // NewSpeechHandler creates a new speech handler
@@ -47,6 +50,7 @@ func NewSpeechHandler(
 	asrService *service.ASRService,
 	llmService *service.LLMService,
 	ttsService *service.TTSService,
+	iseService *service.ISEService,
 	logger *logrus.Logger,
 ) *SpeechHandler {
 	return &SpeechHandler{
@@ -54,6 +58,7 @@ func NewSpeechHandler(
 		asrService:   asrService,
 		llmService:   llmService,
 		ttsService:   ttsService,
+		iseService:   iseService,
 		logger:       logger,
 		sessions:     make(map[string]*VoiceSession),
 	}
@@ -110,8 +115,8 @@ func (h *SpeechHandler) HealthCheck(ctx context.Context, req *speechv1.HealthChe
 	return &speechv1.HealthCheckResponse{
 		Status: speechv1.HealthStatus_HEALTH_STATUS_SERVING,
 		Details: map[string]string{
-			"service":     "speech-service",
-			"version":     "1.0.0",
+			"service":         "speech-service",
+			"version":         "1.0.0",
 			"active_sessions": fmt.Sprintf("%d", len(h.sessions)),
 		},
 	}, nil
@@ -212,8 +217,11 @@ func (h *SpeechHandler) processCompleteAudio(session *VoiceSession, audioData []
 		return
 	}
 
-	// Process with ASR
+	// Process with ASR and ISE (evaluation)
 	h.processAudioWithASR(session, convertedAudio)
+
+	// Also process with ISE for pronunciation evaluation
+	go h.processAudioWithISE(session, convertedAudio)
 }
 
 // processAudioWithASR sends audio to ASR service and processes result
@@ -234,9 +242,9 @@ func (h *SpeechHandler) processAudioWithASR(session *VoiceSession, audioData []b
 
 	// Send ASR result
 	asrResult := &speechv1.ASRResult{
-		Text:       response.Text,
-		Confidence: float32(response.Confidence),
-		IsFinal:    response.IsFinal,
+		Text:        response.Text,
+		Confidence:  float32(response.Confidence),
+		IsFinal:     response.IsFinal,
 		StartTimeMs: 0,
 		EndTimeMs:   int64(len(audioData) * 1000 / 16000), // Rough estimate
 	}
@@ -303,6 +311,134 @@ func (h *SpeechHandler) processTextWithTTS(session *VoiceSession, text string) {
 	}
 
 	h.sendTTSResult(session, ttsResult)
+}
+
+// processAudioWithISE sends audio to ISE service for pronunciation evaluation
+func (h *SpeechHandler) processAudioWithISE(session *VoiceSession, audioData []byte) {
+	// For ISE evaluation, we need reference text from the current context
+	// In a real implementation, this would come from the lesson content or user input
+	referenceText := h.extractReferenceText(session.Context)
+	if referenceText == "" {
+		h.logger.Debugf("No reference text available for ISE evaluation in session %s", session.ID)
+		return
+	}
+
+	request := &model.ISERequest{
+		AudioData: audioData,
+		Text:      referenceText,
+		Language:  "en_us", // Could be configurable based on session
+		Category:  "",      // Auto-determined by the service
+	}
+
+	response, err := h.iseService.EvaluateSpeech(request)
+	if err != nil {
+		h.logger.Errorf("ISE processing failed for session %s: %v", session.ID, err)
+		h.sendError(session, speechv1.ErrorCode_ERROR_CODE_AUDIO_PROCESSING_FAILED, "pronunciation evaluation failed")
+		return
+	}
+
+	h.logger.Infof("Generated ISE evaluation for session %s: overall score %.2f", session.ID, response.OverallScore)
+
+	// Send ISE result
+	iseResult := &speechv1.ISEResult{
+		OverallScore:      float32(response.OverallScore),
+		AccuracyScore:     float32(response.AccuracyScore),
+		FluencyScore:      float32(response.FluencyScore),
+		CompletenessScore: float32(response.CompletenessScore),
+		WordScores:        h.convertWordScores(response.WordScores),
+		PhoneScores:       h.convertPhoneScores(response.PhoneScores),
+		SentenceScores:    h.convertSentenceScores(response.SentenceScores),
+		IsFinal:           response.IsFinal,
+		ReferenceText:     referenceText,
+	}
+
+	h.sendISEResult(session, iseResult)
+}
+
+// extractReferenceText extracts reference text from session context
+func (h *SpeechHandler) extractReferenceText(context string) string {
+	// This is a simplified implementation
+	// In a real app, this would extract the current lesson text or prompt
+	if context == "" {
+		return "Hello, how are you today?" // Default practice sentence
+	}
+
+	// Extract the last sentence or phrase that the user should practice
+	sentences := strings.Split(context, ".")
+	if len(sentences) > 0 {
+		lastSentence := strings.TrimSpace(sentences[len(sentences)-1])
+		if lastSentence != "" {
+			return lastSentence
+		}
+	}
+
+	return "Hello, how are you today?" // Fallback
+}
+
+// convertWordScores converts model word scores to protobuf word scores
+func (h *SpeechHandler) convertWordScores(wordScores []model.WordScore) []*speechv1.WordScore {
+	var pbWordScores []*speechv1.WordScore
+	for _, ws := range wordScores {
+		pbWordScores = append(pbWordScores, &speechv1.WordScore{
+			Word:       ws.Word,
+			Score:      float32(ws.Score),
+			StartTime:  ws.StartTime,
+			EndTime:    ws.EndTime,
+			IsCorrect:  ws.IsCorrect,
+			Confidence: float32(ws.Confidence),
+		})
+	}
+	return pbWordScores
+}
+
+// convertPhoneScores converts model phone scores to protobuf phone scores
+func (h *SpeechHandler) convertPhoneScores(phoneScores []model.PhoneScore) []*speechv1.PhoneScore {
+	var pbPhoneScores []*speechv1.PhoneScore
+	for _, ps := range phoneScores {
+		pbPhoneScores = append(pbPhoneScores, &speechv1.PhoneScore{
+			Phone:     ps.Phone,
+			Score:     float32(ps.Score),
+			StartTime: ps.StartTime,
+			EndTime:   ps.EndTime,
+			IsCorrect: ps.IsCorrect,
+		})
+	}
+	return pbPhoneScores
+}
+
+// convertSentenceScores converts model sentence scores to protobuf sentence scores
+func (h *SpeechHandler) convertSentenceScores(sentenceScores []model.SentenceScore) []*speechv1.SentenceScore {
+	var pbSentenceScores []*speechv1.SentenceScore
+	for _, ss := range sentenceScores {
+		pbSentenceScores = append(pbSentenceScores, &speechv1.SentenceScore{
+			Sentence:      ss.Sentence,
+			Score:         float32(ss.Score),
+			AccuracyScore: float32(ss.AccuracyScore),
+			FluencyScore:  float32(ss.FluencyScore),
+			TotalWords:    int32(ss.TotalWords),
+			CorrectWords:  int32(ss.CorrectWords),
+		})
+	}
+	return pbSentenceScores
+}
+
+// sendISEResult sends ISE evaluation result to client
+func (h *SpeechHandler) sendISEResult(session *VoiceSession, result *speechv1.ISEResult) {
+	response := &speechv1.VoiceResponse{
+		SessionId: session.ID,
+		Timestamp: time.Now().UnixMilli(),
+		Status: &speechv1.ResponseStatus{
+			Success: true,
+			Message: "ISE evaluation completed",
+		},
+		ResponseType: &speechv1.VoiceResponse_IseResult{
+			IseResult: result,
+		},
+	}
+
+	if err := session.Stream.Send(response); err != nil {
+		h.logger.Errorf("Failed to send ISE result to session %s: %v", session.ID, err)
+	}
 }
 
 // Helper methods to send different response types

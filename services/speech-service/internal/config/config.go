@@ -14,6 +14,7 @@ type Config struct {
 	ASR    ASRConfig
 	LLM    LLMConfig
 	TTS    TTSConfig
+	ISE    ISEConfig
 	Audio  AudioConfig
 }
 
@@ -45,6 +46,15 @@ type TTSConfig struct {
 	BaseURL  string
 	Voice    string
 	Language string
+}
+
+// ISEConfig holds ISE (Intelligent Speech Evaluation) service configuration
+type ISEConfig struct {
+	AppID     string
+	APIKey    string
+	APISecret string
+	BaseURL   string
+	Language  string // "zh_cn" or "en_us"
 }
 
 // AudioConfig holds audio processing configuration
@@ -88,6 +98,13 @@ func Load() *Config {
 			BaseURL:  getEnv("TTS_BASE_URL", ""),
 			Voice:    getEnv("TTS_VOICE", "en_us_001"),
 			Language: getEnv("TTS_LANGUAGE", "en"),
+		},
+		ISE: ISEConfig{
+			AppID:     getEnv("ISE_APP_ID", ""),
+			APIKey:    getEnv("ISE_API_KEY", ""),
+			APISecret: getEnv("ISE_API_SECRET", ""),
+			BaseURL:   getEnv("ISE_BASE_URL", "wss://ise-api.xfyun.cn/v2/open-ise"),
+			Language:  getEnv("ISE_LANGUAGE", "en_us"),
 		},
 		Audio: AudioConfig{
 			ChunkSize:  getEnvInt("AUDIO_CHUNK_SIZE", 4096),
