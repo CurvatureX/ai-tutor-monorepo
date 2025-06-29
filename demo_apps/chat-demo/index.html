@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tutor - Chat Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .status.connected {
+            background: #4CAF50;
+        }
+
+        .status.disconnected {
+            background: #f44336;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.assistant .message-content {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-bottom-left-radius: 5px;
+            color: #333;
+        }
+
+        .message-time {
+            font-size: 12px;
+            opacity: 0.6;
+            margin-top: 5px;
+        }
+
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 2px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-group {
+            flex: 1;
+            position: relative;
+        }
+
+        .message-input {
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .message-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .send-button:hover {
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: translateY(-50%) scale(1);
+        }
+
+        .settings {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .model-select {
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            background: white;
+            font-size: 14px;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 15px 20px;
+            background: #e9ecef;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            max-width: 70%;
+        }
+
+        .typing-indicator.show {
+            display: block;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin: 10px 20px;
+            border-left: 4px solid #c62828;
+        }
+
+        .connection-panel {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .connection-settings {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .input-field {
+            padding: 8px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 150px;
+        }
+
+        .connect-button {
+            padding: 8px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .connect-button:hover {
+            background: #45a049;
+        }
+
+        .connect-button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                width: 95%;
+                height: 90vh;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .connection-settings {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="status disconnected" id="status">Disconnected</div>
+            <h1>🤖 AI English Tutor</h1>
+            <p>Practice English conversation with AI</p>
+        </div>
+
+        <div class="connection-panel">
+            <div class="connection-settings">
+                <input type="text" id="serverUrl" class="input-field" placeholder="Server URL" value="http://localhost:8000">
+                <input type="text" id="authToken" class="input-field" placeholder="Auth Token" value="dev-token">
+                <select id="modelSelect" class="input-field">
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="deepseek-chat">DeepSeek Chat</option>
+                    <option value="doubao-seed-1-6-250615" selected>Doubao Seed</option>
+                    <option value="local-tutor">Local Tutor</option>
+                </select>
+                <button id="connectButton" class="connect-button">Connect</button>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                <div class="message-content">
+                    👋 Hello! I'm your AI English tutor. I'm here to help you practice English conversation.
+                    <br><br>
+                    🔗 Please connect to the conversation service first using the settings above.
+                    <br><br>
+                    Once connected, you can:
+                    <br>• Ask me questions about English grammar
+                    <br>• Practice everyday conversations
+                    <br>• Get pronunciation tips
+                    <br>• Discuss any topic to improve your fluency
+                    <div class="message-time">System message</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            AI is typing...
+        </div>
+
+        <div class="chat-input">
+            <div class="input-group">
+                <input type="text" id="messageInput" class="message-input" placeholder="Type your message here..." disabled>
+                <button id="sendButton" class="send-button" disabled>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ChatDemo {
+            constructor() {
+                this.serverUrl = 'http://localhost:8000';
+                this.authToken = 'dev-token';
+                this.selectedModel = 'doubao-seed-1-6-250615';
+                this.isConnected = false;
+                this.conversationHistory = [];
+                
+                this.initializeElements();
+                this.bindEvents();
+            }
+
+            initializeElements() {
+                this.statusElement = document.getElementById('status');
+                this.serverUrlInput = document.getElementById('serverUrl');
+                this.authTokenInput = document.getElementById('authToken');
+                this.modelSelect = document.getElementById('modelSelect');
+                this.connectButton = document.getElementById('connectButton');
+                this.chatMessages = document.getElementById('chatMessages');
+                this.messageInput = document.getElementById('messageInput');
+                this.sendButton = document.getElementById('sendButton');
+                this.typingIndicator = document.getElementById('typingIndicator');
+            }
+
+            bindEvents() {
+                this.connectButton.addEventListener('click', () => this.toggleConnection());
+                this.sendButton.addEventListener('click', () => this.sendMessage());
+                this.messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.sendMessage();
+                    }
+                });
+                this.modelSelect.addEventListener('change', (e) => {
+                    this.selectedModel = e.target.value;
+                });
+            }
+
+            async toggleConnection() {
+                if (this.isConnected) {
+                    this.disconnect();
+                } else {
+                    await this.connect();
+                }
+            }
+
+            async connect() {
+                this.serverUrl = this.serverUrlInput.value.trim();
+                this.authToken = this.authTokenInput.value.trim();
+
+                if (!this.serverUrl || !this.authToken) {
+                    this.showError('Please enter both server URL and auth token');
+                    return;
+                }
+
+                this.connectButton.textContent = 'Connecting...';
+                this.connectButton.disabled = true;
+
+                try {
+                    // Test connection by fetching available models
+                    const response = await fetch(`${this.serverUrl}/v1/models`, {
+                        headers: {
+                            'Authorization': `Bearer ${this.authToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const modelsData = await response.json();
+                        this.updateModelOptions(modelsData.data);
+                        this.setConnected(true);
+                        this.addSystemMessage('✅ Connected to AI Tutor service! You can now start chatting.');
+                    } else {
+                        throw new Error(`Connection failed: ${response.status} ${response.statusText}`);
+                    }
+                } catch (error) {
+                    console.error('Connection error:', error);
+                    this.showError(`Failed to connect: ${error.message}`);
+                    this.setConnected(false);
+                }
+
+                this.connectButton.disabled = false;
+            }
+
+            disconnect() {
+                this.setConnected(false);
+                this.addSystemMessage('🔌 Disconnected from AI Tutor service');
+            }
+
+            setConnected(connected) {
+                this.isConnected = connected;
+                this.statusElement.textContent = connected ? 'Connected' : 'Disconnected';
+                this.statusElement.className = `status ${connected ? 'connected' : 'disconnected'}`;
+                this.connectButton.textContent = connected ? 'Disconnect' : 'Connect';
+                this.messageInput.disabled = !connected;
+                this.sendButton.disabled = !connected;
+                this.serverUrlInput.disabled = connected;
+                this.authTokenInput.disabled = connected;
+            }
+
+            updateModelOptions(models) {
+                // Update model select with available models
+                this.modelSelect.innerHTML = '';
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.id;
+                    if (model.id === this.selectedModel) {
+                        option.selected = true;
+                    }
+                    this.modelSelect.appendChild(option);
+                });
+            }
+
+            async sendMessage() {
+                const message = this.messageInput.value.trim();
+                if (!message || !this.isConnected) return;
+
+                // Add user message to chat
+                this.addMessage('user', message);
+                this.messageInput.value = '';
+                this.sendButton.disabled = true;
+
+                // Show typing indicator
+                this.showTyping(true);
+
+                try {
+                    const response = await this.callChatAPI(message);
+                    this.addMessage('assistant', response);
+                } catch (error) {
+                    console.error('Chat error:', error);
+                    this.showError(`Failed to get response: ${error.message}`);
+                }
+
+                this.showTyping(false);
+                this.sendButton.disabled = false;
+                this.messageInput.focus();
+            }
+
+            async callChatAPI(message) {
+                // Build conversation history for context
+                const messages = [
+                    {
+                        role: 'system',
+                        content: 'You are an AI English tutor. Help users practice English conversation, correct their grammar gently, and provide helpful language learning tips. Be encouraging and patient.'
+                    },
+                    ...this.conversationHistory,
+                    {
+                        role: 'user',
+                        content: message
+                    }
+                ];
+
+                const requestBody = {
+                    model: this.selectedModel,
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 500
+                };
+
+                const response = await fetch(`${this.serverUrl}/v1/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this.authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const assistantMessage = data.choices[0].message.content;
+
+                // Update conversation history
+                this.conversationHistory.push(
+                    { role: 'user', content: message },
+                    { role: 'assistant', content: assistantMessage }
+                );
+
+                // Keep only last 10 exchanges (20 messages) for context
+                if (this.conversationHistory.length > 20) {
+                    this.conversationHistory = this.conversationHistory.slice(-20);
+                }
+
+                return assistantMessage;
+            }
+
+            addMessage(role, content) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${role}`;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.innerHTML = `
+                    ${content.replace(/\n/g, '<br>')}
+                    <div class="message-time">${new Date().toLocaleTimeString()}</div>
+                `;
+
+                messageDiv.appendChild(contentDiv);
+                this.chatMessages.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+
+            addSystemMessage(content) {
+                this.addMessage('assistant', `🔧 ${content}`);
+            }
+
+            showError(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = `❌ ${message}`;
+                this.chatMessages.appendChild(errorDiv);
+                this.scrollToBottom();
+
+                // Remove error message after 5 seconds
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.parentNode.removeChild(errorDiv);
+                    }
+                }, 5000);
+            }
+
+            showTyping(show) {
+                this.typingIndicator.className = show ? 'typing-indicator show' : 'typing-indicator';
+                if (show) {
+                    this.scrollToBottom();
+                }
+            }
+
+            scrollToBottom() {
+                setTimeout(() => {
+                    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+                }, 100);
+            }
+        }
+
+        // Initialize the chat demo when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ChatDemo();
+        });
+    </script>
+</body>
+</html> 

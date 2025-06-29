@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  conversation-service:
+    build:
+      context: ../../services/conversation-service
+      dockerfile: Dockerfile
+    container_name: ai-tutor-conversation-service
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=true
+      - HOST=0.0.0.0
+      - PORT=8000
+      # Add your API keys here or use .env file
+      - DOUBAO_API_KEY=${DOUBAO_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    networks:
+      - ai-tutor-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:8000/v1/models",
+          "-H",
+          "Authorization: Bearer dev-token",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  chat-demo:
+    build:
+      context: ../../demo_apps/chat-demo
+      dockerfile: Dockerfile
+    container_name: ai-tutor-chat-demo
+    ports:
+      - "3001:3001"
+    environment:
+      - CONVERSATION_SERVICE_URL=http://conversation-service:8000
+    networks:
+      - ai-tutor-network
+    depends_on:
+      conversation-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+networks:
+  ai-tutor-network:
+    driver: bridge
+# Optional: Add volumes for development
+# volumes:
+#   conversation-data:
+#   chat-demo-data:
