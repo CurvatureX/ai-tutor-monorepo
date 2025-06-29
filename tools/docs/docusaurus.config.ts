@@ -76,6 +76,15 @@ const config: Config = {
         sidebarPath: './sidebars.ts',
       },
     ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'prd_documentation',
+        path: '../../docs/prd_documentation',
+        routeBasePath: 'prd_documentation',
+        sidebarPath: './sidebars.ts',
+      },
+    ],
   ],
 
   themeConfig: {
@@ -110,6 +119,13 @@ const config: Config = {
           label: 'Prompt Cheatsheet',
         },
         {
+          type: 'doc',
+          docId: 'one_pager',
+          docsPluginId: 'prd_documentation',
+          position: 'left',
+          label: 'PRD Documentation',
+        },
+        {
           href: 'https://github.com/CurvatureX/ai-tutor-monorepo',
           label: 'GitHub',
           position: 'right',
@@ -133,6 +149,10 @@ const config: Config = {
             {
               label: 'Prompt Cheatsheet',
               to: '/prompt_cheatsheet/cursor_prompt',
+            },
+            {
+              label: 'PRD Documentation',
+              to: '/prd_documentation/one_pager',
             },
           ],
         },
