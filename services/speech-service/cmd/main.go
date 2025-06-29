@@ -5,6 +5,8 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -20,8 +22,15 @@ import (
 func main() {
 	// Setup logger
 	logger := logrus.New()
-	logger.SetLevel(logrus.InfoLevel)
-	logger.SetFormatter(&logrus.JSONFormatter{})
+	logger.SetLevel(logrus.DebugLevel)
+	logger.SetReportCaller(true)
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			filename := filepath.Base(f.File)
+			return "", fmt.Sprintf(" %s:%d", filename, f.Line)
+		},
+	})
 
 	// Load configuration
 	cfg := config.Load()

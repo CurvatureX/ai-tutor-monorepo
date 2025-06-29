@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -22,14 +25,22 @@ import (
 func main() {
 	// Setup logger
 	logger := logrus.New()
-	logger.SetLevel(logrus.InfoLevel)
-	logger.SetFormatter(&logrus.JSONFormatter{})
+	logger.SetLevel(logrus.DebugLevel)
+	logger.SetReportCaller(true)
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			filename := filepath.Base(f.File)
+			return "", fmt.Sprintf(" %s:%d", filename, f.Line)
+		},
+	})
 
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
 		logger.Fatalf("Failed to load configuration: %v", err)
 	}
+	logger.Infof("Loaded configuration: %+v", cfg)
 
 	// Connect to speech service
 	conn, err := grpc.Dial(cfg.SpeechService.Address, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -44,7 +55,7 @@ func main() {
 	wsManager := manager.NewWebSocketManager(logger)
 
 	// Initialize handlers
-	wsHandler := handler.NewWebSocketHandler(wsManager, speechClient, logger)
+	wsHandler := handler.NewEnhancedWebSocketHandler(wsManager, speechClient, logger)
 	healthHandler := handler.NewHealthHandler(speechClient, logger)
 
 	// Setup Gin router

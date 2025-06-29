@@ -68,7 +68,7 @@ func Load() *Config {
 
 	return &Config{
 		Server: ServerConfig{
-			Port: getEnv("PORT", "8080"),
+			Port: getEnv("PORT", "50051"),
 			Host: getEnv("HOST", "localhost"),
 		},
 		ASR: ASRConfig{

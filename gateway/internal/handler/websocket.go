@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -25,28 +26,39 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// WebSocketHandler handles WebSocket connections and bridges to gRPC
-type WebSocketHandler struct {
+// SessionStream holds gRPC stream for a session
+type SessionStream struct {
+	Stream     speechv1.SpeechService_ProcessVoiceConversationClient
+	Context    context.Context
+	CancelFunc context.CancelFunc
+	Mutex      sync.Mutex
+}
+
+// EnhancedWebSocketHandler handles WebSocket connections and bridges to gRPC with stream management
+type EnhancedWebSocketHandler struct {
 	manager      *manager.WebSocketManager
 	speechClient speechv1.SpeechServiceClient
 	logger       *logrus.Logger
+	streams      map[string]*SessionStream
+	streamsMutex sync.RWMutex
 }
 
-// NewWebSocketHandler creates a new WebSocket handler
-func NewWebSocketHandler(
+// NewEnhancedWebSocketHandler creates a new enhanced WebSocket handler
+func NewEnhancedWebSocketHandler(
 	manager *manager.WebSocketManager,
 	speechClient speechv1.SpeechServiceClient,
 	logger *logrus.Logger,
-) *WebSocketHandler {
-	return &WebSocketHandler{
+) *EnhancedWebSocketHandler {
+	return &EnhancedWebSocketHandler{
 		manager:      manager,
 		speechClient: speechClient,
 		logger:       logger,
+		streams:      make(map[string]*SessionStream),
 	}
 }
 
 // HandleWebSocket handles WebSocket upgrade and connection
-func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
+func (h *EnhancedWebSocketHandler) HandleWebSocket(c *gin.Context) {
 	sessionID := c.Query("session_id")
 	if sessionID == "" {
 		sessionID = fmt.Sprintf("session_%d", time.Now().UnixNano())
@@ -61,7 +73,10 @@ func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 	}
 
 	h.manager.AddConnection(sessionID, conn)
-	defer h.manager.RemoveConnection(sessionID)
+	defer func() {
+		h.manager.RemoveConnection(sessionID)
+		h.closeGRPCStream(sessionID)
+	}()
 
 	h.logger.Infof("WebSocket connection established for session: %s", sessionID)
 
@@ -73,8 +88,12 @@ func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 	}
 	h.manager.SendMessage(sessionID, welcomeMsg)
 
-	// Start gRPC stream for this session
-	go h.handleGRPCStream(sessionID)
+	// Initialize gRPC stream for this session
+	if err := h.initGRPCStream(sessionID); err != nil {
+		h.logger.Errorf("Failed to initialize gRPC stream for session %s: %v", sessionID, err)
+		h.sendErrorMessage(sessionID, "Failed to initialize voice processing")
+		return
+	}
 
 	// Handle incoming WebSocket messages
 	for {
@@ -97,41 +116,60 @@ func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 	}
 }
 
-// handleGRPCStream establishes and manages the gRPC stream for a session
-func (h *WebSocketHandler) handleGRPCStream(sessionID string) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// initGRPCStream initializes a gRPC stream for a session
+func (h *EnhancedWebSocketHandler) initGRPCStream(sessionID string) error {
+	h.streamsMutex.Lock()
+	defer h.streamsMutex.Unlock()
 
+	// Create context with cancellation
+	ctx, cancel := context.WithCancel(context.Background())
+	
+	// Create gRPC stream
 	stream, err := h.speechClient.ProcessVoiceConversation(ctx)
 	if err != nil {
-		h.logger.Errorf("Failed to create gRPC stream for session %s: %v", sessionID, err)
-		h.sendErrorMessage(sessionID, "Failed to initialize voice processing")
-		return
+		cancel()
+		return fmt.Errorf("failed to create gRPC stream: %w", err)
+	}
+
+	// Store stream
+	h.streams[sessionID] = &SessionStream{
+		Stream:     stream,
+		Context:    ctx,
+		CancelFunc: cancel,
 	}
 
 	// Start goroutine to handle responses from gRPC service
 	go h.handleGRPCResponses(sessionID, stream)
 
-	// Keep the stream alive and handle session lifecycle
-	for {
-		session, exists := h.manager.GetSession(sessionID)
-		if !exists {
-			h.logger.Infof("Session %s ended, closing gRPC stream", sessionID)
-			break
+	h.logger.Infof("Initialized gRPC stream for session: %s", sessionID)
+	return nil
+}
+
+// closeGRPCStream closes the gRPC stream for a session
+func (h *EnhancedWebSocketHandler) closeGRPCStream(sessionID string) {
+	h.streamsMutex.Lock()
+	defer h.streamsMutex.Unlock()
+
+	if sessionStream, exists := h.streams[sessionID]; exists {
+		sessionStream.CancelFunc()
+		if err := sessionStream.Stream.CloseSend(); err != nil {
+			h.logger.Errorf("Failed to close gRPC stream for session %s: %v", sessionID, err)
 		}
-
-		// Send periodic heartbeat if needed
-		time.Sleep(time.Second)
-		_ = session // Keep session reference
-	}
-
-	if err := stream.CloseSend(); err != nil {
-		h.logger.Errorf("Failed to close gRPC stream for session %s: %v", sessionID, err)
+		delete(h.streams, sessionID)
+		h.logger.Infof("Closed gRPC stream for session: %s", sessionID)
 	}
 }
 
+// getGRPCStream safely gets the gRPC stream for a session
+func (h *EnhancedWebSocketHandler) getGRPCStream(sessionID string) (*SessionStream, bool) {
+	h.streamsMutex.RLock()
+	defer h.streamsMutex.RUnlock()
+	stream, exists := h.streams[sessionID]
+	return stream, exists
+}
+
 // handleGRPCResponses handles responses from the gRPC service
-func (h *WebSocketHandler) handleGRPCResponses(sessionID string, stream speechv1.SpeechService_ProcessVoiceConversationClient) {
+func (h *EnhancedWebSocketHandler) handleGRPCResponses(sessionID string, stream speechv1.SpeechService_ProcessVoiceConversationClient) {
 	for {
 		response, err := stream.Recv()
 		if err == io.EOF {
@@ -149,7 +187,7 @@ func (h *WebSocketHandler) handleGRPCResponses(sessionID string, stream speechv1
 }
 
 // processGRPCResponse processes a response from the gRPC service
-func (h *WebSocketHandler) processGRPCResponse(sessionID string, response *speechv1.VoiceResponse) {
+func (h *EnhancedWebSocketHandler) processGRPCResponse(sessionID string, response *speechv1.VoiceResponse) {
 	switch result := response.ResponseType.(type) {
 	case *speechv1.VoiceResponse_AsrResult:
 		h.handleASRResult(sessionID, result.AsrResult)
@@ -167,7 +205,7 @@ func (h *WebSocketHandler) processGRPCResponse(sessionID string, response *speec
 }
 
 // handleASRResult handles ASR results from gRPC service
-func (h *WebSocketHandler) handleASRResult(sessionID string, result *speechv1.ASRResult) {
+func (h *EnhancedWebSocketHandler) handleASRResult(sessionID string, result *speechv1.ASRResult) {
 	message := &model.WebSocketMessage{
 		Type: model.MessageTypeText,
 		Data: map[string]interface{}{
@@ -179,10 +217,11 @@ func (h *WebSocketHandler) handleASRResult(sessionID string, result *speechv1.AS
 		Session: sessionID,
 	}
 	h.manager.SendMessage(sessionID, message)
+	h.logger.Infof("ASR result for session %s: %s (confidence: %.2f)", sessionID, result.Text, result.Confidence)
 }
 
 // handleLLMResult handles LLM results from gRPC service
-func (h *WebSocketHandler) handleLLMResult(sessionID string, result *speechv1.LLMResult) {
+func (h *EnhancedWebSocketHandler) handleLLMResult(sessionID string, result *speechv1.LLMResult) {
 	message := &model.WebSocketMessage{
 		Type: model.MessageTypeText,
 		Data: map[string]interface{}{
@@ -194,10 +233,11 @@ func (h *WebSocketHandler) handleLLMResult(sessionID string, result *speechv1.LL
 		Session: sessionID,
 	}
 	h.manager.SendMessage(sessionID, message)
+	h.logger.Infof("LLM response for session %s: %s", sessionID, result.Text)
 }
 
 // handleTTSResult handles TTS results from gRPC service
-func (h *WebSocketHandler) handleTTSResult(sessionID string, result *speechv1.TTSResult) {
+func (h *EnhancedWebSocketHandler) handleTTSResult(sessionID string, result *speechv1.TTSResult) {
 	// Send binary audio data
 	h.manager.SendBinaryMessage(sessionID, result.AudioData)
 
@@ -213,10 +253,11 @@ func (h *WebSocketHandler) handleTTSResult(sessionID string, result *speechv1.TT
 		Session: sessionID,
 	}
 	h.manager.SendMessage(sessionID, message)
+	h.logger.Infof("TTS audio ready for session %s (%d bytes)", sessionID, len(result.AudioData))
 }
 
 // handleGRPCError handles errors from gRPC service
-func (h *WebSocketHandler) handleGRPCError(sessionID string, error *speechv1.ErrorResult) {
+func (h *EnhancedWebSocketHandler) handleGRPCError(sessionID string, error *speechv1.ErrorResult) {
 	message := &model.WebSocketMessage{
 		Type: model.MessageTypeError,
 		Data: map[string]interface{}{
@@ -228,10 +269,11 @@ func (h *WebSocketHandler) handleGRPCError(sessionID string, error *speechv1.Err
 		Session: sessionID,
 	}
 	h.manager.SendMessage(sessionID, message)
+	h.logger.Errorf("gRPC error for session %s: %s", sessionID, error.Message)
 }
 
 // handleStatusResult handles status updates from gRPC service
-func (h *WebSocketHandler) handleStatusResult(sessionID string, result *speechv1.StatusResult) {
+func (h *EnhancedWebSocketHandler) handleStatusResult(sessionID string, result *speechv1.StatusResult) {
 	message := &model.WebSocketMessage{
 		Type: model.MessageTypeStatus,
 		Data: map[string]interface{}{
@@ -241,10 +283,11 @@ func (h *WebSocketHandler) handleStatusResult(sessionID string, result *speechv1
 		Session: sessionID,
 	}
 	h.manager.SendMessage(sessionID, message)
+	h.logger.Debugf("Status update for session %s: %s", sessionID, result.Message)
 }
 
 // handleTextMessage processes text messages from WebSocket
-func (h *WebSocketHandler) handleTextMessage(sessionID string, data []byte) {
+func (h *EnhancedWebSocketHandler) handleTextMessage(sessionID string, data []byte) {
 	var message model.WebSocketMessage
 	if err := json.Unmarshal(data, &message); err != nil {
 		h.logger.Errorf("Failed to unmarshal text message: %v", err)
@@ -263,7 +306,7 @@ func (h *WebSocketHandler) handleTextMessage(sessionID string, data []byte) {
 }
 
 // handleBinaryMessage processes binary messages from WebSocket
-func (h *WebSocketHandler) handleBinaryMessage(sessionID string, data []byte) {
+func (h *EnhancedWebSocketHandler) handleBinaryMessage(sessionID string, data []byte) {
 	h.logger.Infof("Processing binary message for session %s (%d bytes)", sessionID, len(data))
 
 	// Forward audio data to gRPC service
@@ -271,7 +314,7 @@ func (h *WebSocketHandler) handleBinaryMessage(sessionID string, data []byte) {
 }
 
 // handleControlMessage processes control messages
-func (h *WebSocketHandler) handleControlMessage(sessionID string, message *model.WebSocketMessage) {
+func (h *EnhancedWebSocketHandler) handleControlMessage(sessionID string, message *model.WebSocketMessage) {
 	controlData, ok := message.Data.(map[string]interface{})
 	if !ok {
 		h.sendErrorMessage(sessionID, "Invalid control message data")
@@ -289,7 +332,7 @@ func (h *WebSocketHandler) handleControlMessage(sessionID string, message *model
 }
 
 // handleUserTextMessage processes text input from user
-func (h *WebSocketHandler) handleUserTextMessage(sessionID string, message *model.WebSocketMessage) {
+func (h *EnhancedWebSocketHandler) handleUserTextMessage(sessionID string, message *model.WebSocketMessage) {
 	userText, ok := message.Data.(string)
 	if !ok {
 		h.sendErrorMessage(sessionID, "Invalid text message data")
@@ -305,21 +348,113 @@ func (h *WebSocketHandler) handleUserTextMessage(sessionID string, message *mode
 }
 
 // forwardAudioToGRPC forwards audio data to the gRPC service
-func (h *WebSocketHandler) forwardAudioToGRPC(sessionID string, audioData []byte) {
-	// This would require maintaining a map of session to gRPC stream
-	// For now, we'll log and implement later
-	h.logger.Debugf("Forwarding %d bytes of audio data for session %s", len(audioData), sessionID)
+func (h *EnhancedWebSocketHandler) forwardAudioToGRPC(sessionID string, audioData []byte) {
+	sessionStream, exists := h.getGRPCStream(sessionID)
+	if !exists {
+		h.logger.Errorf("No gRPC stream found for session %s", sessionID)
+		h.sendErrorMessage(sessionID, "Voice processing not available")
+		return
+	}
+
+	// Lock the stream for sending
+	sessionStream.Mutex.Lock()
+	defer sessionStream.Mutex.Unlock()
+
+	// Create gRPC request with audio data
+	request := &speechv1.VoiceRequest{
+		SessionId: sessionID,
+		Timestamp: time.Now().UnixMilli(),
+		RequestType: &speechv1.VoiceRequest_AudioData{
+			AudioData: &speechv1.AudioData{
+				Data: audioData,
+				Format: &speechv1.AudioFormat{
+					Codec:      "webm",
+					SampleRate: 48000, // WebM default
+					Channels:   1,
+					BitDepth:   16,
+				},
+				Metadata: &speechv1.AudioMetadata{
+					IsFinal: true,
+				},
+			},
+		},
+	}
+
+	// Send to gRPC stream
+	if err := sessionStream.Stream.Send(request); err != nil {
+		h.logger.Errorf("Failed to send audio data to gRPC for session %s: %v", sessionID, err)
+		h.sendErrorMessage(sessionID, "Failed to process audio")
+		return
+	}
+
+	h.logger.Debugf("Successfully forwarded %d bytes of audio data for session %s", len(audioData), sessionID)
 }
 
 // forwardControlToGRPC forwards control messages to the gRPC service
-func (h *WebSocketHandler) forwardControlToGRPC(sessionID string, action string, params map[string]interface{}) {
-	// This would require maintaining a map of session to gRPC stream
-	// For now, we'll log and implement later
-	h.logger.Debugf("Forwarding control action '%s' for session %s", action, sessionID)
+func (h *EnhancedWebSocketHandler) forwardControlToGRPC(sessionID string, action string, params map[string]interface{}) {
+	sessionStream, exists := h.getGRPCStream(sessionID)
+	if !exists {
+		h.logger.Errorf("No gRPC stream found for session %s", sessionID)
+		h.sendErrorMessage(sessionID, "Voice processing not available")
+		return
+	}
+
+	// Lock the stream for sending
+	sessionStream.Mutex.Lock()
+	defer sessionStream.Mutex.Unlock()
+
+	// Convert action to gRPC control action
+	var controlAction speechv1.ControlAction
+	switch action {
+	case "start_recording":
+		controlAction = speechv1.ControlAction_CONTROL_ACTION_START_RECORDING
+	case "stop_recording":
+		controlAction = speechv1.ControlAction_CONTROL_ACTION_STOP_RECORDING
+	case "end_session":
+		controlAction = speechv1.ControlAction_CONTROL_ACTION_END_SESSION
+	case "pause_session":
+		controlAction = speechv1.ControlAction_CONTROL_ACTION_PAUSE_SESSION
+	case "resume_session":
+		controlAction = speechv1.ControlAction_CONTROL_ACTION_RESUME_SESSION
+	default:
+		h.logger.Warnf("Unknown control action: %s", action)
+		controlAction = speechv1.ControlAction_CONTROL_ACTION_UNSPECIFIED
+	}
+
+	// Convert params to string map
+	stringParams := make(map[string]string)
+	for key, value := range params {
+		if str, ok := value.(string); ok {
+			stringParams[key] = str
+		} else {
+			stringParams[key] = fmt.Sprintf("%v", value)
+		}
+	}
+
+	// Create gRPC request with control data
+	request := &speechv1.VoiceRequest{
+		SessionId: sessionID,
+		Timestamp: time.Now().UnixMilli(),
+		RequestType: &speechv1.VoiceRequest_Control{
+			Control: &speechv1.ControlMessage{
+				Action: controlAction,
+				Params: stringParams,
+			},
+		},
+	}
+
+	// Send to gRPC stream
+	if err := sessionStream.Stream.Send(request); err != nil {
+		h.logger.Errorf("Failed to send control message to gRPC for session %s: %v", sessionID, err)
+		h.sendErrorMessage(sessionID, "Failed to process control message")
+		return
+	}
+
+	h.logger.Debugf("Successfully forwarded control action '%s' for session %s", action, sessionID)
 }
 
 // sendErrorMessage sends an error message to the client
-func (h *WebSocketHandler) sendErrorMessage(sessionID string, errorMsg string) {
+func (h *EnhancedWebSocketHandler) sendErrorMessage(sessionID string, errorMsg string) {
 	message := &model.WebSocketMessage{
 		Type:    model.MessageTypeError,
 		Data:    errorMsg,
