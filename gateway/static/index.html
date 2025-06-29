@@ -239,6 +239,122 @@
             color: #666;
             margin-top: 2px;
         }
+        .message.ise {
+            color: #6f42c1;
+        }
+        .score-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            color: white;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        }
+        .score-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .overall-score {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 10px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .score-subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        .detailed-scores {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .score-item {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .score-item h4 {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+        .score-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .score-bar {
+            background: rgba(255, 255, 255, 0.2);
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .score-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        .word-scores {
+            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .word-scores h4 {
+            margin: 0 0 10px 0;
+            text-align: center;
+        }
+        .word-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+        .word-item {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: transform 0.2s ease;
+        }
+        .word-item:hover {
+            transform: scale(1.05);
+        }
+        .word-correct {
+            background: rgba(72, 219, 251, 0.3);
+            color: #48dbfb;
+            border: 1px solid rgba(72, 219, 251, 0.5);
+        }
+        .word-incorrect {
+            background: rgba(255, 107, 107, 0.3);
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 107, 107, 0.5);
+        }
+        .reference-text {
+            margin-top: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .reference-text h4 {
+            margin: 0 0 10px 0;
+            opacity: 0.8;
+        }
+        .reference-content {
+            font-size: 1.1em;
+            font-style: italic;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -395,6 +511,24 @@
                     this.avgResponseEl.textContent = avgTime + 'ms';
                 } else {
                     this.avgResponseEl.textContent = '-';
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.data && typeof data.data === 'object') {
+                            if (data.data.type === 'asr_result') {
+                                addMessage('ASR: ' + data.data.text + ' (confidence: ' + data.data.confidence + ')', 'asr');
+                            } else if (data.data.type === 'llm_response') {
+                                addMessage('LLM: ' + data.data.text, 'llm');
+                            } else if (data.data.type === 'tts_ready') {
+                                addMessage('TTS audio ready (format: ' + data.data.format + ')', 'tts');
+                            } else if (data.data.type === 'ise_result') {
+                                displayISEResult(data.data);
+                            }
+                        } else {
+                            addMessage('Gateway: ' + (data.data || JSON.stringify(data)));
+                        }
+                    } catch (e) {
+                        addMessage('Gateway: ' + event.data);
+                    }
                 }
             }
 
@@ -735,6 +869,126 @@
         document.addEventListener('DOMContentLoaded', () => {
             new GatewayVoicePracticeApp();
         });
+        function sendControlMessage(action) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const message = {
+                    type: 'control',
+                    data: {
+                        action: action
+                    },
+                    session: sessionId
+                };
+                ws.send(JSON.stringify(message));
+            }
+        }
+
+        function sendAudioData(audioBlob) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addMessage('Sending audio data (' + audioBlob.size + ' bytes)...');
+                ws.send(audioBlob);
+            }
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+
+        function displayISEResult(iseData) {
+            const messagesDiv = document.getElementById('messages');
+            const scoreCard = document.createElement('div');
+            scoreCard.className = 'score-card';
+            
+            // Get score color based on overall score
+            const getScoreColor = (score) => {
+                if (score >= 90) return '#48dbfb';
+                if (score >= 80) return '#feca57';
+                if (score >= 70) return '#ff9ff3';
+                return '#ff6b6b';
+            };
+            
+            const overallScore = Math.round(iseData.overall_score || 0);
+            const accuracyScore = Math.round(iseData.accuracy_score || 0);
+            const fluencyScore = Math.round(iseData.fluency_score || 0);
+            const completenessScore = Math.round(iseData.completeness_score || 0);
+            
+            let scoreCardHTML = `
+                <div class="score-header">
+                    <div class="score-subtitle">🎯 语音评测结果</div>
+                    <div class="overall-score" style="color: ${getScoreColor(overallScore)}">${overallScore}</div>
+                    <div class="score-subtitle">总体得分</div>
+                </div>
+                
+                <div class="detailed-scores">
+                    <div class="score-item">
+                        <h4>准确性</h4>
+                        <div class="score-value" style="color: ${getScoreColor(accuracyScore)}">${accuracyScore}</div>
+                        <div class="score-bar">
+                            <div class="score-fill" style="width: ${accuracyScore}%"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <h4>流利度</h4>
+                        <div class="score-value" style="color: ${getScoreColor(fluencyScore)}">${fluencyScore}</div>
+                        <div class="score-bar">
+                            <div class="score-fill" style="width: ${fluencyScore}%"></div>
+                        </div>
+                    </div>
+                    <div class="score-item">
+                        <h4>完整度</h4>
+                        <div class="score-value" style="color: ${getScoreColor(completenessScore)}">${completenessScore}</div>
+                        <div class="score-bar">
+                            <div class="score-fill" style="width: ${completenessScore}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add reference text if available
+            if (iseData.reference_text) {
+                scoreCardHTML += `
+                    <div class="reference-text">
+                        <h4>参考文本</h4>
+                        <div class="reference-content">"${iseData.reference_text}"</div>
+                    </div>
+                `;
+            }
+            
+            // Add word-level scores if available
+            if (iseData.word_scores && iseData.word_scores.length > 0) {
+                scoreCardHTML += `
+                    <div class="word-scores">
+                        <h4>单词评分详情</h4>
+                        <div class="word-list">
+                `;
+                
+                iseData.word_scores.forEach(word => {
+                    const wordClass = word.is_correct ? 'word-correct' : 'word-incorrect';
+                    const wordScore = Math.round(word.score || 0);
+                    scoreCardHTML += `
+                        <div class="${wordClass} word-item" title="得分: ${wordScore}, 置信度: ${Math.round(word.confidence * 100)}%">
+                            ${word.word} (${wordScore})
+                        </div>
+                    `;
+                });
+                
+                scoreCardHTML += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            scoreCard.innerHTML = scoreCardHTML;
+            messagesDiv.appendChild(scoreCard);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            // Also add a simple text message for the log
+            addMessage(`语音评测完成 - 总分: ${overallScore}, 准确性: ${accuracyScore}, 流利度: ${fluencyScore}, 完整度: ${completenessScore}`, 'ise');
+        }
+
+        // Auto-connect on page load
+        window.onload = function() {
+            connect();
+        };
     </script>
 </body>
 </html>

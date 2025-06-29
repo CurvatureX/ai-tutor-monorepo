@@ -45,9 +45,10 @@ func main() {
 	asrService := service.NewASRService(&cfg.ASR, logger)
 	llmService := service.NewLLMService(&cfg.LLM, logger)
 	ttsService := service.NewTTSService(&cfg.TTS, logger)
+	iseService := service.NewISEService(&cfg.ISE, logger)
 
 	// Initialize gRPC handler
-	speechHandler := handler.NewSpeechHandler(audioService, asrService, llmService, ttsService, logger)
+	speechHandler := handler.NewSpeechHandler(audioService, asrService, llmService, ttsService, iseService, logger)
 
 	// Create gRPC server
 	grpcServer := grpc.NewServer()

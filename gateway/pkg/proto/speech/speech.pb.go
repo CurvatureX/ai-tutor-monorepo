@@ -662,6 +662,7 @@ type VoiceResponse struct {
 	//	*VoiceResponse_AsrResult
 	//	*VoiceResponse_LlmResult
 	//	*VoiceResponse_TtsResult
+	//	*VoiceResponse_IseResult
 	//	*VoiceResponse_Error
 	//	*VoiceResponse_StatusResult
 	ResponseType  isVoiceResponse_ResponseType `protobuf_oneof:"response_type"`
@@ -754,6 +755,15 @@ func (x *VoiceResponse) GetTtsResult() *TTSResult {
 	return nil
 }
 
+func (x *VoiceResponse) GetIseResult() *ISEResult {
+	if x != nil {
+		if x, ok := x.ResponseType.(*VoiceResponse_IseResult); ok {
+			return x.IseResult
+		}
+	}
+	return nil
+}
+
 func (x *VoiceResponse) GetError() *ErrorResult {
 	if x != nil {
 		if x, ok := x.ResponseType.(*VoiceResponse_Error); ok {
@@ -788,12 +798,16 @@ type VoiceResponse_TtsResult struct {
 	TtsResult *TTSResult `protobuf:"bytes,6,opt,name=tts_result,json=ttsResult,proto3,oneof"`
 }
 
+type VoiceResponse_IseResult struct {
+	IseResult *ISEResult `protobuf:"bytes,7,opt,name=ise_result,json=iseResult,proto3,oneof"`
+}
+
 type VoiceResponse_Error struct {
-	Error *ErrorResult `protobuf:"bytes,7,opt,name=error,proto3,oneof"`
+	Error *ErrorResult `protobuf:"bytes,8,opt,name=error,proto3,oneof"`
 }
 
 type VoiceResponse_StatusResult struct {
-	StatusResult *StatusResult `protobuf:"bytes,8,opt,name=status_result,json=statusResult,proto3,oneof"`
+	StatusResult *StatusResult `protobuf:"bytes,9,opt,name=status_result,json=statusResult,proto3,oneof"`
 }
 
 func (*VoiceResponse_AsrResult) isVoiceResponse_ResponseType() {}
@@ -801,6 +815,8 @@ func (*VoiceResponse_AsrResult) isVoiceResponse_ResponseType() {}
 func (*VoiceResponse_LlmResult) isVoiceResponse_ResponseType() {}
 
 func (*VoiceResponse_TtsResult) isVoiceResponse_ResponseType() {}
+
+func (*VoiceResponse_IseResult) isVoiceResponse_ResponseType() {}
 
 func (*VoiceResponse_Error) isVoiceResponse_ResponseType() {}
 
@@ -1114,6 +1130,362 @@ func (x *TTSResult) GetChunkIndex() int32 {
 	return 0
 }
 
+// ISEResult contains speech evaluation results
+type ISEResult struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	OverallScore      float32                `protobuf:"fixed32,1,opt,name=overall_score,json=overallScore,proto3" json:"overall_score,omitempty"`                // Overall pronunciation score (0-100)
+	AccuracyScore     float32                `protobuf:"fixed32,2,opt,name=accuracy_score,json=accuracyScore,proto3" json:"accuracy_score,omitempty"`             // Accuracy score (0-100)
+	FluencyScore      float32                `protobuf:"fixed32,3,opt,name=fluency_score,json=fluencyScore,proto3" json:"fluency_score,omitempty"`                // Fluency score (0-100)
+	CompletenessScore float32                `protobuf:"fixed32,4,opt,name=completeness_score,json=completenessScore,proto3" json:"completeness_score,omitempty"` // Completeness score (0-100)
+	WordScores        []*WordScore           `protobuf:"bytes,5,rep,name=word_scores,json=wordScores,proto3" json:"word_scores,omitempty"`                        // Word-level scores
+	PhoneScores       []*PhoneScore          `protobuf:"bytes,6,rep,name=phone_scores,json=phoneScores,proto3" json:"phone_scores,omitempty"`                     // Phoneme-level scores
+	SentenceScores    []*SentenceScore       `protobuf:"bytes,7,rep,name=sentence_scores,json=sentenceScores,proto3" json:"sentence_scores,omitempty"`            // Sentence-level scores
+	IsFinal           bool                   `protobuf:"varint,8,opt,name=is_final,json=isFinal,proto3" json:"is_final,omitempty"`
+	ReferenceText     string                 `protobuf:"bytes,9,opt,name=reference_text,json=referenceText,proto3" json:"reference_text,omitempty"` // Original text that was evaluated against
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ISEResult) Reset() {
+	*x = ISEResult{}
+	mi := &file_speech_speech_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ISEResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ISEResult) ProtoMessage() {}
+
+func (x *ISEResult) ProtoReflect() protoreflect.Message {
+	mi := &file_speech_speech_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ISEResult.ProtoReflect.Descriptor instead.
+func (*ISEResult) Descriptor() ([]byte, []int) {
+	return file_speech_speech_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ISEResult) GetOverallScore() float32 {
+	if x != nil {
+		return x.OverallScore
+	}
+	return 0
+}
+
+func (x *ISEResult) GetAccuracyScore() float32 {
+	if x != nil {
+		return x.AccuracyScore
+	}
+	return 0
+}
+
+func (x *ISEResult) GetFluencyScore() float32 {
+	if x != nil {
+		return x.FluencyScore
+	}
+	return 0
+}
+
+func (x *ISEResult) GetCompletenessScore() float32 {
+	if x != nil {
+		return x.CompletenessScore
+	}
+	return 0
+}
+
+func (x *ISEResult) GetWordScores() []*WordScore {
+	if x != nil {
+		return x.WordScores
+	}
+	return nil
+}
+
+func (x *ISEResult) GetPhoneScores() []*PhoneScore {
+	if x != nil {
+		return x.PhoneScores
+	}
+	return nil
+}
+
+func (x *ISEResult) GetSentenceScores() []*SentenceScore {
+	if x != nil {
+		return x.SentenceScores
+	}
+	return nil
+}
+
+func (x *ISEResult) GetIsFinal() bool {
+	if x != nil {
+		return x.IsFinal
+	}
+	return false
+}
+
+func (x *ISEResult) GetReferenceText() string {
+	if x != nil {
+		return x.ReferenceText
+	}
+	return ""
+}
+
+// WordScore represents word-level pronunciation evaluation
+type WordScore struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Word          string                 `protobuf:"bytes,1,opt,name=word,proto3" json:"word,omitempty"`
+	Score         float32                `protobuf:"fixed32,2,opt,name=score,proto3" json:"score,omitempty"`
+	StartTime     int64                  `protobuf:"varint,3,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"` // milliseconds
+	EndTime       int64                  `protobuf:"varint,4,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`       // milliseconds
+	IsCorrect     bool                   `protobuf:"varint,5,opt,name=is_correct,json=isCorrect,proto3" json:"is_correct,omitempty"`
+	Confidence    float32                `protobuf:"fixed32,6,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WordScore) Reset() {
+	*x = WordScore{}
+	mi := &file_speech_speech_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WordScore) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WordScore) ProtoMessage() {}
+
+func (x *WordScore) ProtoReflect() protoreflect.Message {
+	mi := &file_speech_speech_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WordScore.ProtoReflect.Descriptor instead.
+func (*WordScore) Descriptor() ([]byte, []int) {
+	return file_speech_speech_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *WordScore) GetWord() string {
+	if x != nil {
+		return x.Word
+	}
+	return ""
+}
+
+func (x *WordScore) GetScore() float32 {
+	if x != nil {
+		return x.Score
+	}
+	return 0
+}
+
+func (x *WordScore) GetStartTime() int64 {
+	if x != nil {
+		return x.StartTime
+	}
+	return 0
+}
+
+func (x *WordScore) GetEndTime() int64 {
+	if x != nil {
+		return x.EndTime
+	}
+	return 0
+}
+
+func (x *WordScore) GetIsCorrect() bool {
+	if x != nil {
+		return x.IsCorrect
+	}
+	return false
+}
+
+func (x *WordScore) GetConfidence() float32 {
+	if x != nil {
+		return x.Confidence
+	}
+	return 0
+}
+
+// PhoneScore represents phoneme-level pronunciation evaluation
+type PhoneScore struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Phone         string                 `protobuf:"bytes,1,opt,name=phone,proto3" json:"phone,omitempty"` // Phoneme symbol (e.g., /ə/, /t/, /h/)
+	Score         float32                `protobuf:"fixed32,2,opt,name=score,proto3" json:"score,omitempty"`
+	StartTime     int64                  `protobuf:"varint,3,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"` // milliseconds
+	EndTime       int64                  `protobuf:"varint,4,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`       // milliseconds
+	IsCorrect     bool                   `protobuf:"varint,5,opt,name=is_correct,json=isCorrect,proto3" json:"is_correct,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PhoneScore) Reset() {
+	*x = PhoneScore{}
+	mi := &file_speech_speech_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PhoneScore) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PhoneScore) ProtoMessage() {}
+
+func (x *PhoneScore) ProtoReflect() protoreflect.Message {
+	mi := &file_speech_speech_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PhoneScore.ProtoReflect.Descriptor instead.
+func (*PhoneScore) Descriptor() ([]byte, []int) {
+	return file_speech_speech_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *PhoneScore) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *PhoneScore) GetScore() float32 {
+	if x != nil {
+		return x.Score
+	}
+	return 0
+}
+
+func (x *PhoneScore) GetStartTime() int64 {
+	if x != nil {
+		return x.StartTime
+	}
+	return 0
+}
+
+func (x *PhoneScore) GetEndTime() int64 {
+	if x != nil {
+		return x.EndTime
+	}
+	return 0
+}
+
+func (x *PhoneScore) GetIsCorrect() bool {
+	if x != nil {
+		return x.IsCorrect
+	}
+	return false
+}
+
+// SentenceScore represents sentence-level pronunciation evaluation
+type SentenceScore struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sentence      string                 `protobuf:"bytes,1,opt,name=sentence,proto3" json:"sentence,omitempty"`
+	Score         float32                `protobuf:"fixed32,2,opt,name=score,proto3" json:"score,omitempty"`
+	AccuracyScore float32                `protobuf:"fixed32,3,opt,name=accuracy_score,json=accuracyScore,proto3" json:"accuracy_score,omitempty"`
+	FluencyScore  float32                `protobuf:"fixed32,4,opt,name=fluency_score,json=fluencyScore,proto3" json:"fluency_score,omitempty"`
+	TotalWords    int32                  `protobuf:"varint,5,opt,name=total_words,json=totalWords,proto3" json:"total_words,omitempty"`
+	CorrectWords  int32                  `protobuf:"varint,6,opt,name=correct_words,json=correctWords,proto3" json:"correct_words,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SentenceScore) Reset() {
+	*x = SentenceScore{}
+	mi := &file_speech_speech_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SentenceScore) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SentenceScore) ProtoMessage() {}
+
+func (x *SentenceScore) ProtoReflect() protoreflect.Message {
+	mi := &file_speech_speech_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SentenceScore.ProtoReflect.Descriptor instead.
+func (*SentenceScore) Descriptor() ([]byte, []int) {
+	return file_speech_speech_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *SentenceScore) GetSentence() string {
+	if x != nil {
+		return x.Sentence
+	}
+	return ""
+}
+
+func (x *SentenceScore) GetScore() float32 {
+	if x != nil {
+		return x.Score
+	}
+	return 0
+}
+
+func (x *SentenceScore) GetAccuracyScore() float32 {
+	if x != nil {
+		return x.AccuracyScore
+	}
+	return 0
+}
+
+func (x *SentenceScore) GetFluencyScore() float32 {
+	if x != nil {
+		return x.FluencyScore
+	}
+	return 0
+}
+
+func (x *SentenceScore) GetTotalWords() int32 {
+	if x != nil {
+		return x.TotalWords
+	}
+	return 0
+}
+
+func (x *SentenceScore) GetCorrectWords() int32 {
+	if x != nil {
+		return x.CorrectWords
+	}
+	return 0
+}
+
 // ErrorResult contains error information
 type ErrorResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1127,7 +1499,7 @@ type ErrorResult struct {
 
 func (x *ErrorResult) Reset() {
 	*x = ErrorResult{}
-	mi := &file_speech_speech_proto_msgTypes[10]
+	mi := &file_speech_speech_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1139,7 +1511,7 @@ func (x *ErrorResult) String() string {
 func (*ErrorResult) ProtoMessage() {}
 
 func (x *ErrorResult) ProtoReflect() protoreflect.Message {
-	mi := &file_speech_speech_proto_msgTypes[10]
+	mi := &file_speech_speech_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1152,7 +1524,7 @@ func (x *ErrorResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorResult.ProtoReflect.Descriptor instead.
 func (*ErrorResult) Descriptor() ([]byte, []int) {
-	return file_speech_speech_proto_rawDescGZIP(), []int{10}
+	return file_speech_speech_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ErrorResult) GetCode() ErrorCode {
@@ -1195,7 +1567,7 @@ type StatusResult struct {
 
 func (x *StatusResult) Reset() {
 	*x = StatusResult{}
-	mi := &file_speech_speech_proto_msgTypes[11]
+	mi := &file_speech_speech_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1207,7 +1579,7 @@ func (x *StatusResult) String() string {
 func (*StatusResult) ProtoMessage() {}
 
 func (x *StatusResult) ProtoReflect() protoreflect.Message {
-	mi := &file_speech_speech_proto_msgTypes[11]
+	mi := &file_speech_speech_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1220,7 +1592,7 @@ func (x *StatusResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResult.ProtoReflect.Descriptor instead.
 func (*StatusResult) Descriptor() ([]byte, []int) {
-	return file_speech_speech_proto_rawDescGZIP(), []int{11}
+	return file_speech_speech_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *StatusResult) GetProcessingStatus() ProcessingStatus {
@@ -1256,7 +1628,7 @@ type ResponseStatus struct {
 
 func (x *ResponseStatus) Reset() {
 	*x = ResponseStatus{}
-	mi := &file_speech_speech_proto_msgTypes[12]
+	mi := &file_speech_speech_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1268,7 +1640,7 @@ func (x *ResponseStatus) String() string {
 func (*ResponseStatus) ProtoMessage() {}
 
 func (x *ResponseStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_speech_speech_proto_msgTypes[12]
+	mi := &file_speech_speech_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1281,7 +1653,7 @@ func (x *ResponseStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResponseStatus.ProtoReflect.Descriptor instead.
 func (*ResponseStatus) Descriptor() ([]byte, []int) {
-	return file_speech_speech_proto_rawDescGZIP(), []int{12}
+	return file_speech_speech_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ResponseStatus) GetSuccess() bool {
@@ -1315,7 +1687,7 @@ type HealthCheckRequest struct {
 
 func (x *HealthCheckRequest) Reset() {
 	*x = HealthCheckRequest{}
-	mi := &file_speech_speech_proto_msgTypes[13]
+	mi := &file_speech_speech_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1327,7 +1699,7 @@ func (x *HealthCheckRequest) String() string {
 func (*HealthCheckRequest) ProtoMessage() {}
 
 func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_speech_speech_proto_msgTypes[13]
+	mi := &file_speech_speech_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1340,7 +1712,7 @@ func (x *HealthCheckRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckRequest.ProtoReflect.Descriptor instead.
 func (*HealthCheckRequest) Descriptor() ([]byte, []int) {
-	return file_speech_speech_proto_rawDescGZIP(), []int{13}
+	return file_speech_speech_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *HealthCheckRequest) GetService() string {
@@ -1360,7 +1732,7 @@ type HealthCheckResponse struct {
 
 func (x *HealthCheckResponse) Reset() {
 	*x = HealthCheckResponse{}
-	mi := &file_speech_speech_proto_msgTypes[14]
+	mi := &file_speech_speech_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1372,7 +1744,7 @@ func (x *HealthCheckResponse) String() string {
 func (*HealthCheckResponse) ProtoMessage() {}
 
 func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_speech_speech_proto_msgTypes[14]
+	mi := &file_speech_speech_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1385,7 +1757,7 @@ func (x *HealthCheckResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthCheckResponse.ProtoReflect.Descriptor instead.
 func (*HealthCheckResponse) Descriptor() ([]byte, []int) {
-	return file_speech_speech_proto_rawDescGZIP(), []int{14}
+	return file_speech_speech_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *HealthCheckResponse) GetStatus() HealthStatus {
@@ -1436,7 +1808,7 @@ const file_speech_speech_proto_rawDesc = "" +
 	"\x06params\x18\x02 \x03(\v2%.speech.v1.ControlMessage.ParamsEntryR\x06params\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa5\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xdc\x03\n" +
 	"\rVoiceResponse\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x1c\n" +
@@ -1447,9 +1819,11 @@ const file_speech_speech_proto_rawDesc = "" +
 	"\n" +
 	"llm_result\x18\x05 \x01(\v2\x14.speech.v1.LLMResultH\x00R\tllmResult\x125\n" +
 	"\n" +
-	"tts_result\x18\x06 \x01(\v2\x14.speech.v1.TTSResultH\x00R\tttsResult\x12.\n" +
-	"\x05error\x18\a \x01(\v2\x16.speech.v1.ErrorResultH\x00R\x05error\x12>\n" +
-	"\rstatus_result\x18\b \x01(\v2\x17.speech.v1.StatusResultH\x00R\fstatusResultB\x0f\n" +
+	"tts_result\x18\x06 \x01(\v2\x14.speech.v1.TTSResultH\x00R\tttsResult\x125\n" +
+	"\n" +
+	"ise_result\x18\a \x01(\v2\x14.speech.v1.ISEResultH\x00R\tiseResult\x12.\n" +
+	"\x05error\x18\b \x01(\v2\x16.speech.v1.ErrorResultH\x00R\x05error\x12>\n" +
+	"\rstatus_result\x18\t \x01(\v2\x17.speech.v1.StatusResultH\x00R\fstatusResultB\x0f\n" +
 	"\rresponse_type\"\xe1\x01\n" +
 	"\tASRResult\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12\x1e\n" +
@@ -1487,7 +1861,46 @@ const file_speech_speech_proto_rawDesc = "" +
 	"durationMs\x12\x19\n" +
 	"\bis_final\x18\x04 \x01(\bR\aisFinal\x12\x1f\n" +
 	"\vchunk_index\x18\x05 \x01(\x05R\n" +
-	"chunkIndex\"\x89\x01\n" +
+	"chunkIndex\"\xa1\x03\n" +
+	"\tISEResult\x12#\n" +
+	"\roverall_score\x18\x01 \x01(\x02R\foverallScore\x12%\n" +
+	"\x0eaccuracy_score\x18\x02 \x01(\x02R\raccuracyScore\x12#\n" +
+	"\rfluency_score\x18\x03 \x01(\x02R\ffluencyScore\x12-\n" +
+	"\x12completeness_score\x18\x04 \x01(\x02R\x11completenessScore\x125\n" +
+	"\vword_scores\x18\x05 \x03(\v2\x14.speech.v1.WordScoreR\n" +
+	"wordScores\x128\n" +
+	"\fphone_scores\x18\x06 \x03(\v2\x15.speech.v1.PhoneScoreR\vphoneScores\x12A\n" +
+	"\x0fsentence_scores\x18\a \x03(\v2\x18.speech.v1.SentenceScoreR\x0esentenceScores\x12\x19\n" +
+	"\bis_final\x18\b \x01(\bR\aisFinal\x12%\n" +
+	"\x0ereference_text\x18\t \x01(\tR\rreferenceText\"\xae\x01\n" +
+	"\tWordScore\x12\x12\n" +
+	"\x04word\x18\x01 \x01(\tR\x04word\x12\x14\n" +
+	"\x05score\x18\x02 \x01(\x02R\x05score\x12\x1d\n" +
+	"\n" +
+	"start_time\x18\x03 \x01(\x03R\tstartTime\x12\x19\n" +
+	"\bend_time\x18\x04 \x01(\x03R\aendTime\x12\x1d\n" +
+	"\n" +
+	"is_correct\x18\x05 \x01(\bR\tisCorrect\x12\x1e\n" +
+	"\n" +
+	"confidence\x18\x06 \x01(\x02R\n" +
+	"confidence\"\x91\x01\n" +
+	"\n" +
+	"PhoneScore\x12\x14\n" +
+	"\x05phone\x18\x01 \x01(\tR\x05phone\x12\x14\n" +
+	"\x05score\x18\x02 \x01(\x02R\x05score\x12\x1d\n" +
+	"\n" +
+	"start_time\x18\x03 \x01(\x03R\tstartTime\x12\x19\n" +
+	"\bend_time\x18\x04 \x01(\x03R\aendTime\x12\x1d\n" +
+	"\n" +
+	"is_correct\x18\x05 \x01(\bR\tisCorrect\"\xd3\x01\n" +
+	"\rSentenceScore\x12\x1a\n" +
+	"\bsentence\x18\x01 \x01(\tR\bsentence\x12\x14\n" +
+	"\x05score\x18\x02 \x01(\x02R\x05score\x12%\n" +
+	"\x0eaccuracy_score\x18\x03 \x01(\x02R\raccuracyScore\x12#\n" +
+	"\rfluency_score\x18\x04 \x01(\x02R\ffluencyScore\x12\x1f\n" +
+	"\vtotal_words\x18\x05 \x01(\x05R\n" +
+	"totalWords\x12#\n" +
+	"\rcorrect_words\x18\x06 \x01(\x05R\fcorrectWords\"\x89\x01\n" +
 	"\vErrorResult\x12(\n" +
 	"\x04code\x18\x01 \x01(\x0e2\x14.speech.v1.ErrorCodeR\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12\x18\n" +
@@ -1563,7 +1976,7 @@ func file_speech_speech_proto_rawDescGZIP() []byte {
 }
 
 var file_speech_speech_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_speech_speech_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_speech_speech_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_speech_speech_proto_goTypes = []any{
 	(ControlAction)(0),          // 0: speech.v1.ControlAction
 	(LLMResultType)(0),          // 1: speech.v1.LLMResultType
@@ -1580,15 +1993,19 @@ var file_speech_speech_proto_goTypes = []any{
 	(*WordAlignment)(nil),       // 12: speech.v1.WordAlignment
 	(*LLMResult)(nil),           // 13: speech.v1.LLMResult
 	(*TTSResult)(nil),           // 14: speech.v1.TTSResult
-	(*ErrorResult)(nil),         // 15: speech.v1.ErrorResult
-	(*StatusResult)(nil),        // 16: speech.v1.StatusResult
-	(*ResponseStatus)(nil),      // 17: speech.v1.ResponseStatus
-	(*HealthCheckRequest)(nil),  // 18: speech.v1.HealthCheckRequest
-	(*HealthCheckResponse)(nil), // 19: speech.v1.HealthCheckResponse
-	nil,                         // 20: speech.v1.ControlMessage.ParamsEntry
-	nil,                         // 21: speech.v1.LLMResult.MetadataEntry
-	nil,                         // 22: speech.v1.StatusResult.MetadataEntry
-	nil,                         // 23: speech.v1.HealthCheckResponse.DetailsEntry
+	(*ISEResult)(nil),           // 15: speech.v1.ISEResult
+	(*WordScore)(nil),           // 16: speech.v1.WordScore
+	(*PhoneScore)(nil),          // 17: speech.v1.PhoneScore
+	(*SentenceScore)(nil),       // 18: speech.v1.SentenceScore
+	(*ErrorResult)(nil),         // 19: speech.v1.ErrorResult
+	(*StatusResult)(nil),        // 20: speech.v1.StatusResult
+	(*ResponseStatus)(nil),      // 21: speech.v1.ResponseStatus
+	(*HealthCheckRequest)(nil),  // 22: speech.v1.HealthCheckRequest
+	(*HealthCheckResponse)(nil), // 23: speech.v1.HealthCheckResponse
+	nil,                         // 24: speech.v1.ControlMessage.ParamsEntry
+	nil,                         // 25: speech.v1.LLMResult.MetadataEntry
+	nil,                         // 26: speech.v1.StatusResult.MetadataEntry
+	nil,                         // 27: speech.v1.HealthCheckResponse.DetailsEntry
 }
 var file_speech_speech_proto_depIdxs = []int32{
 	6,  // 0: speech.v1.VoiceRequest.audio_data:type_name -> speech.v1.AudioData
@@ -1596,31 +2013,35 @@ var file_speech_speech_proto_depIdxs = []int32{
 	7,  // 2: speech.v1.AudioData.format:type_name -> speech.v1.AudioFormat
 	8,  // 3: speech.v1.AudioData.metadata:type_name -> speech.v1.AudioMetadata
 	0,  // 4: speech.v1.ControlMessage.action:type_name -> speech.v1.ControlAction
-	20, // 5: speech.v1.ControlMessage.params:type_name -> speech.v1.ControlMessage.ParamsEntry
-	17, // 6: speech.v1.VoiceResponse.status:type_name -> speech.v1.ResponseStatus
+	24, // 5: speech.v1.ControlMessage.params:type_name -> speech.v1.ControlMessage.ParamsEntry
+	21, // 6: speech.v1.VoiceResponse.status:type_name -> speech.v1.ResponseStatus
 	11, // 7: speech.v1.VoiceResponse.asr_result:type_name -> speech.v1.ASRResult
 	13, // 8: speech.v1.VoiceResponse.llm_result:type_name -> speech.v1.LLMResult
 	14, // 9: speech.v1.VoiceResponse.tts_result:type_name -> speech.v1.TTSResult
-	15, // 10: speech.v1.VoiceResponse.error:type_name -> speech.v1.ErrorResult
-	16, // 11: speech.v1.VoiceResponse.status_result:type_name -> speech.v1.StatusResult
-	12, // 12: speech.v1.ASRResult.word_alignments:type_name -> speech.v1.WordAlignment
-	1,  // 13: speech.v1.LLMResult.result_type:type_name -> speech.v1.LLMResultType
-	21, // 14: speech.v1.LLMResult.metadata:type_name -> speech.v1.LLMResult.MetadataEntry
-	7,  // 15: speech.v1.TTSResult.format:type_name -> speech.v1.AudioFormat
-	2,  // 16: speech.v1.ErrorResult.code:type_name -> speech.v1.ErrorCode
-	3,  // 17: speech.v1.StatusResult.processing_status:type_name -> speech.v1.ProcessingStatus
-	22, // 18: speech.v1.StatusResult.metadata:type_name -> speech.v1.StatusResult.MetadataEntry
-	4,  // 19: speech.v1.HealthCheckResponse.status:type_name -> speech.v1.HealthStatus
-	23, // 20: speech.v1.HealthCheckResponse.details:type_name -> speech.v1.HealthCheckResponse.DetailsEntry
-	5,  // 21: speech.v1.SpeechService.ProcessVoiceConversation:input_type -> speech.v1.VoiceRequest
-	18, // 22: speech.v1.SpeechService.HealthCheck:input_type -> speech.v1.HealthCheckRequest
-	10, // 23: speech.v1.SpeechService.ProcessVoiceConversation:output_type -> speech.v1.VoiceResponse
-	19, // 24: speech.v1.SpeechService.HealthCheck:output_type -> speech.v1.HealthCheckResponse
-	23, // [23:25] is the sub-list for method output_type
-	21, // [21:23] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	15, // 10: speech.v1.VoiceResponse.ise_result:type_name -> speech.v1.ISEResult
+	19, // 11: speech.v1.VoiceResponse.error:type_name -> speech.v1.ErrorResult
+	20, // 12: speech.v1.VoiceResponse.status_result:type_name -> speech.v1.StatusResult
+	12, // 13: speech.v1.ASRResult.word_alignments:type_name -> speech.v1.WordAlignment
+	1,  // 14: speech.v1.LLMResult.result_type:type_name -> speech.v1.LLMResultType
+	25, // 15: speech.v1.LLMResult.metadata:type_name -> speech.v1.LLMResult.MetadataEntry
+	7,  // 16: speech.v1.TTSResult.format:type_name -> speech.v1.AudioFormat
+	16, // 17: speech.v1.ISEResult.word_scores:type_name -> speech.v1.WordScore
+	17, // 18: speech.v1.ISEResult.phone_scores:type_name -> speech.v1.PhoneScore
+	18, // 19: speech.v1.ISEResult.sentence_scores:type_name -> speech.v1.SentenceScore
+	2,  // 20: speech.v1.ErrorResult.code:type_name -> speech.v1.ErrorCode
+	3,  // 21: speech.v1.StatusResult.processing_status:type_name -> speech.v1.ProcessingStatus
+	26, // 22: speech.v1.StatusResult.metadata:type_name -> speech.v1.StatusResult.MetadataEntry
+	4,  // 23: speech.v1.HealthCheckResponse.status:type_name -> speech.v1.HealthStatus
+	27, // 24: speech.v1.HealthCheckResponse.details:type_name -> speech.v1.HealthCheckResponse.DetailsEntry
+	5,  // 25: speech.v1.SpeechService.ProcessVoiceConversation:input_type -> speech.v1.VoiceRequest
+	22, // 26: speech.v1.SpeechService.HealthCheck:input_type -> speech.v1.HealthCheckRequest
+	10, // 27: speech.v1.SpeechService.ProcessVoiceConversation:output_type -> speech.v1.VoiceResponse
+	23, // 28: speech.v1.SpeechService.HealthCheck:output_type -> speech.v1.HealthCheckResponse
+	27, // [27:29] is the sub-list for method output_type
+	25, // [25:27] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_speech_speech_proto_init() }
@@ -1636,6 +2057,7 @@ func file_speech_speech_proto_init() {
 		(*VoiceResponse_AsrResult)(nil),
 		(*VoiceResponse_LlmResult)(nil),
 		(*VoiceResponse_TtsResult)(nil),
+		(*VoiceResponse_IseResult)(nil),
 		(*VoiceResponse_Error)(nil),
 		(*VoiceResponse_StatusResult)(nil),
 	}
@@ -1645,7 +2067,7 @@ func file_speech_speech_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_speech_speech_proto_rawDesc), len(file_speech_speech_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   19,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
