@@ -61,10 +61,23 @@ async def lifespan(app: FastAPI):
     # Startup complete
     print(f"✅ Service started successfully!")
     print(f"📝 Server running on: http://{settings.host}:{settings.port}")
-    print(f"📚 Local AI model: {settings.use_local_model}")
     print(f"🎯 APIs: OpenAI-compatible + Doubao native")
     print(f"🗣️ Ready for English conversation practice!")
     print(f"📖 API docs: http://{settings.host}:{settings.port}/docs")
+
+    # Show configured APIs
+    configured_apis = []
+    if settings.has_doubao_api():
+        configured_apis.append("Doubao ✅")
+    if settings.has_deepseek_api():
+        configured_apis.append("DeepSeek ✅")
+    if settings.has_gemini_api():
+        configured_apis.append("Gemini ✅")
+
+    if configured_apis:
+        print(f"🔌 External APIs: {', '.join(configured_apis)}")
+    else:
+        print("⚠️  No external API keys configured - using demo responses")
 
     yield
 

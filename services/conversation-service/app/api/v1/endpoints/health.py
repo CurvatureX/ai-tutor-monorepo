@@ -20,12 +20,12 @@ async def root():
         "status": "healthy",
         "purpose": "English conversation practice and learning",
         "apis": ["OpenAI-compatible", "Doubao"],
-        "backend": "Local AI Models + Doubao",
+        "backend": "External LLM APIs",
         "features": [
             "Pronunciation help",
-            "Grammar practice", 
+            "Grammar practice",
             "Fluency building",
-            "Natural conversation"
+            "Natural conversation",
         ],
         "timestamp": datetime.utcnow().isoformat(),
     }
@@ -33,8 +33,7 @@ async def root():
 
 @router.get("/health")
 async def health_check(
-    ai_service: AIService = AIServiceDep,
-    settings: Settings = SettingsDep
+    ai_service: AIService = AIServiceDep, settings: Settings = SettingsDep
 ):
     """Detailed health check"""
     return {
@@ -45,9 +44,14 @@ async def health_check(
             "doubao_service": True,
         },
         "config": {
-            "use_local_model": settings.use_local_model,
-            "model_name": settings.model_name,
-            "doubao_available": True,
+            "default_model": settings.default_model,
+            "max_tokens": settings.max_tokens,
+            "temperature": settings.temperature,
+        },
+        "external_apis": {
+            "doubao": settings.has_doubao_api(),
+            "deepseek": settings.has_deepseek_api(),
+            "gemini": settings.has_gemini_api(),
         },
         "timestamp": datetime.utcnow().isoformat(),
     }
