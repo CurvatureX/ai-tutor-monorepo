@@ -1,2 +1,66 @@
+# OS generated files
 .DS_Store
 **/.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Environment files containing API keys
+.env
+.env.local
+
+# Built binaries
+voice-practice-server
+main
+gateway/gateway
+services/*/speech-service
+services/*/*-service
+
+# Debug files
+debug/
+*.wav
+*.webm
+*.mp3
+
+# IDE files
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+
+# Log files
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Node modules (if any frontend)
+node_modules/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Docker volumes
+.docker/
