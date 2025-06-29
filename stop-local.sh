@@ -45,12 +45,13 @@ stop_service "Gateway" "gateway.pid"
 # Stop Speech Service
 stop_service "Speech Service" "speech-service.pid"
 
-# Clean up log files (optional)
-read -p "🗑️  Delete log files? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+# Clean up log files (automatically)
+echo "🗑️  Cleaning up log files..."
+if [ -f "gateway.log" ] || [ -f "speech-service.log" ]; then
     rm -f gateway.log speech-service.log
     echo "  ✅ Log files deleted"
+else
+    echo "  ℹ️  No log files to delete"
 fi
 
 echo ""

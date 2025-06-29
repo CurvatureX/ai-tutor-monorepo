@@ -217,11 +217,8 @@ func (h *SpeechHandler) processCompleteAudio(session *VoiceSession, audioData []
 		return
 	}
 
-	// Process with ASR and ISE (evaluation)
+	// Process with ASR first, then ISE using ASR result
 	h.processAudioWithASR(session, convertedAudio)
-
-	// Also process with ISE for pronunciation evaluation
-	go h.processAudioWithISE(session, convertedAudio)
 }
 
 // processAudioWithASR sends audio to ASR service and processes result
@@ -254,6 +251,11 @@ func (h *SpeechHandler) processAudioWithASR(session *VoiceSession, audioData []b
 	// Process with LLM if final result
 	if response.IsFinal && response.Text != "" {
 		go h.processTextWithLLM(session, response.Text)
+	}
+
+	// Process with ISE for pronunciation evaluation using ASR result
+	if response.Text != "" {
+		go h.processAudioWithISE(session, audioData, response.Text)
 	}
 }
 
@@ -313,27 +315,36 @@ func (h *SpeechHandler) processTextWithTTS(session *VoiceSession, text string) {
 	h.sendTTSResult(session, ttsResult)
 }
 
-// processAudioWithISE sends audio to ISE service for pronunciation evaluation
-func (h *SpeechHandler) processAudioWithISE(session *VoiceSession, audioData []byte) {
-	// For ISE evaluation, we need reference text from the current context
-	// In a real implementation, this would come from the lesson content or user input
-	referenceText := h.extractReferenceText(session.Context)
-	if referenceText == "" {
-		h.logger.Debugf("No reference text available for ISE evaluation in session %s", session.ID)
+// processAudioWithISE sends audio to ISE service for pronunciation evaluation using ASR result
+func (h *SpeechHandler) processAudioWithISE(session *VoiceSession, audioData []byte, asrText string) {
+	// Use ASR result as the content to evaluate (not reference text)
+	if strings.TrimSpace(asrText) == "" {
+		h.logger.Debugf("Empty ASR text for ISE evaluation in session %s", session.ID)
 		return
 	}
 
+	// ISE requires pure PCM data, not WAV format
+	// Remove WAV header (first 44 bytes) if present
+	pcmData := audioData
+	if len(audioData) > 44 && string(audioData[0:4]) == "RIFF" && string(audioData[8:12]) == "WAVE" {
+		pcmData = audioData[44:] // Skip 44-byte WAV header
+		h.logger.Debugf("Removed WAV header for ISE: %d bytes -> %d bytes PCM", len(audioData), len(pcmData))
+	}
+
+	// Format ASR text according to iFlytek ISE API requirements
+	formattedText := h.formatTextForISE(asrText)
+
 	request := &model.ISERequest{
-		AudioData: audioData,
-		Text:      referenceText,
-		Language:  "en_us", // Could be configurable based on session
-		Category:  "",      // Auto-determined by the service
+		AudioData: pcmData,         // Use pure PCM data instead of WAV
+		Text:      formattedText,   // Use ASR result (what user actually said)
+		Language:  "en_us",         // Could be configurable based on session
+		Category:  "read_sentence", // Explicitly set for sentence evaluation
 	}
 
 	response, err := h.iseService.EvaluateSpeech(request)
 	if err != nil {
-		h.logger.Errorf("ISE processing failed for session %s: %v", session.ID, err)
-		h.sendError(session, speechv1.ErrorCode_ERROR_CODE_AUDIO_PROCESSING_FAILED, "pronunciation evaluation failed")
+		h.logger.Debugf("ISE processing failed for session %s (non-critical, silently skipped): %v", session.ID, err)
+		// Silently skip ISE processing - no notification to user
 		return
 	}
 
@@ -349,30 +360,48 @@ func (h *SpeechHandler) processAudioWithISE(session *VoiceSession, audioData []b
 		PhoneScores:       h.convertPhoneScores(response.PhoneScores),
 		SentenceScores:    h.convertSentenceScores(response.SentenceScores),
 		IsFinal:           response.IsFinal,
-		ReferenceText:     referenceText,
+		ReferenceText:     asrText, // Store the ASR text that was evaluated
 	}
 
 	h.sendISEResult(session, iseResult)
 }
 
-// extractReferenceText extracts reference text from session context
+// extractReferenceText extracts reference text from session context and formats it for ISE API
 func (h *SpeechHandler) extractReferenceText(context string) string {
 	// This is a simplified implementation
 	// In a real app, this would extract the current lesson text or prompt
+	var rawText string
 	if context == "" {
-		return "Hello, how are you today?" // Default practice sentence
-	}
-
-	// Extract the last sentence or phrase that the user should practice
-	sentences := strings.Split(context, ".")
-	if len(sentences) > 0 {
-		lastSentence := strings.TrimSpace(sentences[len(sentences)-1])
-		if lastSentence != "" {
-			return lastSentence
+		rawText = "Hello, how are you today?" // Default practice sentence
+	} else {
+		// Extract the last sentence or phrase that the user should practice
+		sentences := strings.Split(context, ".")
+		if len(sentences) > 0 {
+			lastSentence := strings.TrimSpace(sentences[len(sentences)-1])
+			if lastSentence != "" {
+				rawText = lastSentence
+			} else {
+				rawText = "Hello, how are you today?" // Fallback
+			}
+		} else {
+			rawText = "Hello, how are you today?" // Fallback
 		}
 	}
 
-	return "Hello, how are you today?" // Fallback
+	// Format text according to iFlytek ISE API requirements
+	return h.formatTextForISE(rawText)
+}
+
+// formatTextForISE formats text according to iFlytek ISE API requirements
+func (h *SpeechHandler) formatTextForISE(text string) string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		text = "Hello, how are you today?"
+	}
+
+	// iFlytek ISE API expects plain text without format markers
+	// No need for [content] or [word] prefixes - just send the text directly
+	return text
 }
 
 // convertWordScores converts model word scores to protobuf word scores

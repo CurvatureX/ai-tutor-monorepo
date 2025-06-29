@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -43,7 +44,9 @@ func NewTTSService(cfg *config.TTSConfig, logger *logrus.Logger) *TTSService {
 		logger: logger,
 		wsURL:  wsURL,
 		dialer: &websocket.Dialer{
-			HandshakeTimeout: 10 * time.Second,
+			HandshakeTimeout: 30 * time.Second,
+			ReadBufferSize:   4096,
+			WriteBufferSize:  4096,
 		},
 	}
 }
@@ -66,6 +69,22 @@ func (s *TTSService) SynthesizeSpeech(text string) (*model.TTSResponse, error) {
 		return nil, fmt.Errorf("failed to connect to TTS service: %v", err)
 	}
 	defer conn.Close()
+
+	// Set connection timeouts to prevent resource conflicts with ISE
+	writeTimeout := 30 * time.Second
+	readTimeout := 60 * time.Second
+
+	// Set write deadline for sending messages
+	if err := conn.SetWriteDeadline(time.Now().Add(writeTimeout)); err != nil {
+		s.logger.Warnf("⚠️ Failed to set TTS write deadline: %v", err)
+	}
+
+	// Set read deadline for receiving responses
+	if err := conn.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
+		s.logger.Warnf("⚠️ Failed to set TTS read deadline: %v", err)
+	}
+
+	s.logger.Debugf("✅ TTS WebSocket connected with timeouts (read: %v, write: %v)", readTimeout, writeTimeout)
 
 	// Use streaming synthesis for better user experience
 	audioData, err := s.streamSynthesize(conn, text)
@@ -90,7 +109,10 @@ func (s *TTSService) streamSynthesize(conn *websocket.Conn, text string) ([]byte
 	// Create the request message
 	message := s.createTTSMessage(compressedInput)
 
-	// Send the request
+	// Send the request with timeout reset
+	if err := conn.SetWriteDeadline(time.Now().Add(30 * time.Second)); err != nil {
+		s.logger.Warnf("⚠️ Failed to set TTS write deadline: %v", err)
+	}
 	if err := conn.WriteMessage(websocket.BinaryMessage, message); err != nil {
 		return nil, fmt.Errorf("failed to send TTS request: %v", err)
 	}
@@ -98,8 +120,17 @@ func (s *TTSService) streamSynthesize(conn *websocket.Conn, text string) ([]byte
 	// Collect audio data from streaming responses
 	var audioData []byte
 	for {
+		// Reset read deadline for each message to prevent timeout during streaming
+		if err := conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
+			s.logger.Warnf("⚠️ Failed to set TTS read deadline: %v", err)
+		}
+
 		_, responseData, err := conn.ReadMessage()
 		if err != nil {
+			// Log specific timeout errors for debugging
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				s.logger.Errorf("⏰ TTS read timeout: %v", err)
+			}
 			return nil, fmt.Errorf("failed to read TTS response: %v", err)
 		}
 

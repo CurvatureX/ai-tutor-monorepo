@@ -381,6 +381,10 @@
                 <div class="timing-label">TTS Generation</div>
                 <div class="timing-value" id="ttsTime">-</div>
             </div>
+            <div class="timing-card" id="iseTiming">
+                <div class="timing-label">ISE Evaluation</div>
+                <div class="timing-value" id="iseTime">-</div>
+            </div>
             <div class="timing-card" id="totalTiming">
                 <div class="timing-label">Total Pipeline</div>
                 <div class="timing-value" id="totalTime">-</div>
@@ -401,11 +405,11 @@
                 <div class="stat-label">Errors</div>
             </div>
         </div>
-
+        
         <div id="status" class="status disconnected">
             Disconnected - Click Connect to start
         </div>
-
+        
         <div class="controls">
             <button id="connectBtn" class="btn btn-primary">Connect</button>
             <button id="disconnectBtn" class="btn btn-secondary" disabled>Disconnect</button>
@@ -418,7 +422,7 @@
             <div class="pulse"></div>
             <span>Recording... Speak now!</span>
         </div>
-
+        
         <div id="chat" class="chat">
             <div class="message system">
                 Welcome! Connect to the gateway server and start practicing your English conversation skills.
@@ -445,7 +449,8 @@
                     startTime: null,
                     asrStartTime: null,
                     llmStartTime: null,
-                    ttsStartTime: null
+                    ttsStartTime: null,
+                    iseStartTime: null
                 };
                 
                 this.initializeElements();
@@ -467,11 +472,13 @@
                 this.asrTimingEl = document.getElementById('asrTiming');
                 this.llmTimingEl = document.getElementById('llmTiming');
                 this.ttsTimingEl = document.getElementById('ttsTiming');
+                this.iseTimingEl = document.getElementById('iseTiming');
                 this.totalTimingEl = document.getElementById('totalTiming');
                 
                 this.asrTimeEl = document.getElementById('asrTime');
                 this.llmTimeEl = document.getElementById('llmTime');
                 this.ttsTimeEl = document.getElementById('ttsTime');
+                this.iseTimeEl = document.getElementById('iseTime');
                 this.totalTimeEl = document.getElementById('totalTime');
                 
                 // Stats elements
@@ -536,9 +543,10 @@
                 this.asrTimeEl.textContent = '-';
                 this.llmTimeEl.textContent = '-';
                 this.ttsTimeEl.textContent = '-';
+                this.iseTimeEl.textContent = '-';
                 this.totalTimeEl.textContent = '-';
                 
-                [this.asrTimingEl, this.llmTimingEl, this.ttsTimingEl, this.totalTimingEl].forEach(el => {
+                [this.asrTimingEl, this.llmTimingEl, this.ttsTimingEl, this.iseTimingEl, this.totalTimingEl].forEach(el => {
                     el.classList.remove('active', 'completed', 'error');
                 });
             }
@@ -681,11 +689,27 @@
                     };
                     
                     this.ws.onerror = (error) => {
-                        this.showError('WebSocket error: ' + error.message);
+                        console.error('WebSocket error:', error);
+                        let errorMessage = 'Connection error';
+                        
+                        // Try to get more specific error information
+                        if (error.message) {
+                            errorMessage = error.message;
+                        } else if (error.code) {
+                            errorMessage = `Connection failed (Code: ${error.code})`;
+                        } else if (this.ws.readyState === WebSocket.CLOSED) {
+                            errorMessage = 'Connection closed unexpectedly';
+                        } else if (this.ws.readyState === WebSocket.CLOSING) {
+                            errorMessage = 'Connection is closing';
+                        }
+                        
+                        this.showError('WebSocket error: ' + errorMessage);
                     };
                     
                 } catch (error) {
-                    this.showError('Failed to connect: ' + error.message);
+                    console.error('Connection error:', error);
+                    const errorMessage = error.message || error.toString() || 'Unknown connection error';
+                    this.showError('Failed to connect: ' + errorMessage);
                 }
             }
 
@@ -711,9 +735,12 @@
                                         this.updateTimingDisplay('asr', asrTime);
                                         
                                         this.addMessage(message.data.text, 'user', {
-                                            confidence: message.data.confidence,
                                             timing: `ASR: ${asrTime}ms`
                                         });
+                                        
+                                        // Start ISE timing (ISE processing begins after ASR)
+                                        this.currentRequest.iseStartTime = Date.now();
+                                        this.setModuleActive('ise');
                                         
                                         this.currentRequest.llmStartTime = Date.now();
                                         this.setModuleActive('llm');
@@ -731,8 +758,14 @@
                                     this.setModuleActive('tts');
                                     break;
                                 case 'tts_ready':
-                                    const ttsTime = Date.now() - this.currentRequest.ttsStartTime;
-                                    this.updateTimingDisplay('tts', ttsTime);
+                                    // Calculate and display TTS timing
+                                    if (this.currentRequest.ttsStartTime) {
+                                        const ttsTime = Date.now() - this.currentRequest.ttsStartTime;
+                                        this.updateTimingDisplay('tts', ttsTime);
+                                        console.log('TTS completed in:', ttsTime, 'ms');
+                                    } else {
+                                        console.warn('TTS start time not set, cannot calculate timing');
+                                    }
                                     
                                     const totalTime = Date.now() - this.currentRequest.startTime;
                                     this.updateTimingDisplay('total', totalTime);
@@ -743,6 +776,17 @@
                                     
                                     console.log('TTS audio ready, format:', message.data.format);
                                     break;
+                                case 'ise_result':
+                                    console.log('Received ISE result:', message.data);
+                                    
+                                    // Calculate and display ISE timing
+                                    if (this.currentRequest.iseStartTime) {
+                                        const iseTime = Date.now() - this.currentRequest.iseStartTime;
+                                        this.updateTimingDisplay('ise', iseTime);
+                                    }
+                                    
+                                    this.updateLastUserMessageWithScore(message.data);
+                                    break;
                             }
                         } else {
                             this.addMessage(message.data, 'ai');
@@ -750,12 +794,18 @@
                         break;
                     case 'error':
                         this.showError(message.data);
-                        [this.asrTimingEl, this.llmTimingEl, this.ttsTimingEl, this.totalTimingEl].forEach(el => {
+                        [this.asrTimingEl, this.llmTimingEl, this.ttsTimingEl, this.iseTimingEl, this.totalTimingEl].forEach(el => {
                             if (el.classList.contains('active')) {
                                 el.classList.remove('active');
                                 el.classList.add('error');
                             }
                         });
+                        break;
+                    case 'status':
+                        // Only handle non-ISE status messages
+                        if (message.data.message && !message.data.message.includes('Voice scoring')) {
+                            this.addMessage(message.data.message, 'system');
+                        }
                         break;
                 }
             }
@@ -831,7 +881,9 @@
                     this.recordingIndicator.classList.add('active');
                     
                 } catch (error) {
-                    this.showError('Failed to start recording: ' + error.message);
+                    console.error('Recording error:', error);
+                    const errorMessage = error.message || error.toString() || 'Unknown recording error';
+                    this.showError('Failed to start recording: ' + errorMessage);
                 }
             }
 
@@ -864,6 +916,125 @@
                     this.ws.send(JSON.stringify(message));
                 }
             }
+
+            updateLastUserMessageWithScore(iseData) {
+                // Find the last user message
+                const userMessages = this.chatEl.querySelectorAll('.message.user');
+                if (userMessages.length === 0) return;
+                
+                const lastUserMessage = userMessages[userMessages.length - 1];
+                
+                // Get the original text content (first div contains the main message)
+                const messageContent = lastUserMessage.querySelector('div');
+                if (!messageContent) return;
+                
+                let originalText = messageContent.textContent.trim();
+                
+                // Remove timing info if present (like "ASR: 5113ms")
+                originalText = originalText.replace(/ASR:\s*\d+ms/g, '').trim();
+                
+                // If we have word scores, highlight words with score < 4.5
+                if (iseData.word_scores && iseData.word_scores.length > 0) {
+                    let processedText = originalText;
+                    
+                    // Create a map of words that need highlighting (< 4.5)
+                    const wordsToHighlight = iseData.word_scores.filter(word => word.score < 4.5);
+                    
+                    if (wordsToHighlight.length > 0) {
+                        // Sort words by length (longest first) to avoid partial replacements
+                        wordsToHighlight.sort((a, b) => b.word.length - a.word.length);
+                        
+                        // Replace each word with highlighted version based on score
+                        wordsToHighlight.forEach(wordData => {
+                            const word = wordData.word;
+                            const score = wordData.score.toFixed(1);
+                            
+                            // Determine color and style based on score
+                            let color, backgroundColor, title;
+                            if (score < 4.0) {
+                                // Red for scores < 4.0 (needs improvement)
+                                color = '#ff6b6b';
+                                backgroundColor = 'linear-gradient(180deg, transparent 0%, transparent 65%, rgba(255, 107, 107, 0.15) 65%, rgba(255, 107, 107, 0.25) 100%)';
+                                title = '发音需要改进';
+                            } else {
+                                // Yellow for scores 4.0-4.4 (average)
+                                color = '#f39c12';
+                                backgroundColor = 'linear-gradient(180deg, transparent 0%, transparent 65%, rgba(243, 156, 18, 0.15) 65%, rgba(243, 156, 18, 0.25) 100%)';
+                                title = '发音一般，可以提升';
+                            }
+                            
+                            // Create case-insensitive regex for word boundaries
+                            const regex = new RegExp(`\\b${word}\\b`, 'gi');
+                            
+                            // Replace with elegant highlighted version
+                            const highlightedWord = `<span style="
+                                position: relative;
+                                color: ${color}; 
+                                font-weight: 500;
+                                background: ${backgroundColor};
+                                border-radius: 2px;
+                                padding: 1px 2px;
+                            " title="${title}: ${score}/5.0">${word}<span style="
+                                font-size: 0.65em; 
+                                color: ${color}; 
+                                font-weight: 400;
+                                margin-left: 2px;
+                                opacity: 0.8;
+                            ">${score}</span></span>`;
+                            
+                            processedText = processedText.replace(regex, highlightedWord);
+                        });
+                        
+                        // Update the message content with highlighted text
+                        messageContent.innerHTML = processedText;
+                    }
+                }
+                
+                // Add overall score summary at the end (compact version)
+                const overallScore = Math.round((iseData.overall_score || 0) * 10) / 10;
+                const accuracyScore = Math.round((iseData.accuracy_score || 0) * 10) / 10;
+                const fluencyScore = Math.round((iseData.fluency_score || 0) * 10) / 10;
+                const completenessScore = Math.round((iseData.completeness_score || 0) * 10) / 10;
+                
+                const getScoreColor = (score) => {
+                    if (score >= 4.5) return '#48dbfb';  // 优秀
+                    if (score >= 4.0) return '#feca57';  // 良好
+                    if (score >= 3.5) return '#ff9ff3';  // 一般
+                    return '#ff6b6b';                    // 需要改进
+                };
+                
+                // Add compact overall score
+                const scoreHTML = `
+                    <div style="
+                        margin-top: 8px; 
+                        padding: 6px 10px; 
+                        background: rgba(255, 255, 255, 0.95); 
+                        border-radius: 8px; 
+                        border-left: 3px solid ${getScoreColor(overallScore)};
+                        font-size: 0.8em;
+                        color: #555;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+                        line-height: 1.3;
+                    ">
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <span style="color: ${getScoreColor(overallScore)}; font-weight: 600;">
+                                🎯总分 ${overallScore}
+                            </span>
+                            <div style="display: flex; gap: 8px; font-size: 0.9em; color: #666;">
+                                <span>📝准确性 <span style="color: ${getScoreColor(accuracyScore)}; font-weight: 500;">${accuracyScore}</span></span>
+                                <span>🗣️流利度 <span style="color: ${getScoreColor(fluencyScore)}; font-weight: 500;">${fluencyScore}</span></span>
+                                <span>✅完整度 <span style="color: ${getScoreColor(completenessScore)}; font-weight: 500;">${completenessScore}</span></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                lastUserMessage.insertAdjacentHTML('beforeend', scoreHTML);
+                
+                // Scroll to show the updated message
+                this.chatEl.scrollTop = this.chatEl.scrollHeight;
+            }
+
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -893,97 +1064,7 @@
             document.getElementById('messages').innerHTML = '';
         }
 
-        function displayISEResult(iseData) {
-            const messagesDiv = document.getElementById('messages');
-            const scoreCard = document.createElement('div');
-            scoreCard.className = 'score-card';
-            
-            // Get score color based on overall score
-            const getScoreColor = (score) => {
-                if (score >= 90) return '#48dbfb';
-                if (score >= 80) return '#feca57';
-                if (score >= 70) return '#ff9ff3';
-                return '#ff6b6b';
-            };
-            
-            const overallScore = Math.round(iseData.overall_score || 0);
-            const accuracyScore = Math.round(iseData.accuracy_score || 0);
-            const fluencyScore = Math.round(iseData.fluency_score || 0);
-            const completenessScore = Math.round(iseData.completeness_score || 0);
-            
-            let scoreCardHTML = `
-                <div class="score-header">
-                    <div class="score-subtitle">🎯 语音评测结果</div>
-                    <div class="overall-score" style="color: ${getScoreColor(overallScore)}">${overallScore}</div>
-                    <div class="score-subtitle">总体得分</div>
-                </div>
-                
-                <div class="detailed-scores">
-                    <div class="score-item">
-                        <h4>准确性</h4>
-                        <div class="score-value" style="color: ${getScoreColor(accuracyScore)}">${accuracyScore}</div>
-                        <div class="score-bar">
-                            <div class="score-fill" style="width: ${accuracyScore}%"></div>
-                        </div>
-                    </div>
-                    <div class="score-item">
-                        <h4>流利度</h4>
-                        <div class="score-value" style="color: ${getScoreColor(fluencyScore)}">${fluencyScore}</div>
-                        <div class="score-bar">
-                            <div class="score-fill" style="width: ${fluencyScore}%"></div>
-                        </div>
-                    </div>
-                    <div class="score-item">
-                        <h4>完整度</h4>
-                        <div class="score-value" style="color: ${getScoreColor(completenessScore)}">${completenessScore}</div>
-                        <div class="score-bar">
-                            <div class="score-fill" style="width: ${completenessScore}%"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Add reference text if available
-            if (iseData.reference_text) {
-                scoreCardHTML += `
-                    <div class="reference-text">
-                        <h4>参考文本</h4>
-                        <div class="reference-content">"${iseData.reference_text}"</div>
-                    </div>
-                `;
-            }
-            
-            // Add word-level scores if available
-            if (iseData.word_scores && iseData.word_scores.length > 0) {
-                scoreCardHTML += `
-                    <div class="word-scores">
-                        <h4>单词评分详情</h4>
-                        <div class="word-list">
-                `;
-                
-                iseData.word_scores.forEach(word => {
-                    const wordClass = word.is_correct ? 'word-correct' : 'word-incorrect';
-                    const wordScore = Math.round(word.score || 0);
-                    scoreCardHTML += `
-                        <div class="${wordClass} word-item" title="得分: ${wordScore}, 置信度: ${Math.round(word.confidence * 100)}%">
-                            ${word.word} (${wordScore})
-                        </div>
-                    `;
-                });
-                
-                scoreCardHTML += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            scoreCard.innerHTML = scoreCardHTML;
-            messagesDiv.appendChild(scoreCard);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            
-            // Also add a simple text message for the log
-            addMessage(`语音评测完成 - 总分: ${overallScore}, 准确性: ${accuracyScore}, 流利度: ${fluencyScore}, 完整度: ${completenessScore}`, 'ise');
-        }
+
 
         // Auto-connect on page load
         window.onload = function() {

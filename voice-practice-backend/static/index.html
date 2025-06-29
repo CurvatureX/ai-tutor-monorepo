@@ -296,6 +296,15 @@
             font-style: italic;
             line-height: 1.4;
         }
+        
+        .message.info {
+            background: linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%);
+            color: white;
+            border-left: 4px solid #ffffff;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -468,11 +477,27 @@
                     };
                     
                     this.ws.onerror = (error) => {
-                        this.showError('WebSocket error: ' + error.message);
+                        console.error('WebSocket error:', error);
+                        let errorMessage = 'Connection error';
+                        
+                        // Try to get more specific error information
+                        if (error.message) {
+                            errorMessage = error.message;
+                        } else if (error.code) {
+                            errorMessage = `Connection failed (Code: ${error.code})`;
+                        } else if (this.ws.readyState === WebSocket.CLOSED) {
+                            errorMessage = 'Connection closed unexpectedly';
+                        } else if (this.ws.readyState === WebSocket.CLOSING) {
+                            errorMessage = 'Connection is closing';
+                        }
+                        
+                        this.showError('WebSocket error: ' + errorMessage);
                     };
                     
                 } catch (error) {
-                    this.showError('Failed to connect: ' + error.message);
+                    console.error('Connection error:', error);
+                    const errorMessage = error.message || error.toString() || 'Unknown connection error';
+                    this.showError('Failed to connect: ' + errorMessage);
                 }
             }
 
@@ -515,6 +540,12 @@
                         break;
                     case 'error':
                         this.showError(message.data);
+                        break;
+                    case 'status':
+                        // Only handle non-ISE status messages
+                        if (message.data.message && !message.data.message.includes('Voice scoring')) {
+                            this.addMessage(message.data.message, 'system');
+                        }
                         break;
                 }
             }
@@ -628,7 +659,9 @@
                     this.recordingIndicator.classList.add('active');
                     
                 } catch (error) {
-                    this.showError('Failed to start recording: ' + error.message);
+                    console.error('Recording error:', error);
+                    const errorMessage = error.message || error.toString() || 'Unknown recording error';
+                    this.showError('Failed to start recording: ' + errorMessage);
                 }
             }
 
@@ -669,6 +702,8 @@
                     this.ws.send(JSON.stringify(message));
                 }
             }
+
+
 
             displayISEResult(iseData) {
                 const messageEl = document.createElement('div');
